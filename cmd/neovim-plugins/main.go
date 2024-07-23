@@ -3,7 +3,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -31,13 +30,6 @@ func (p Plugin) fail() {
 	p.write("fail")
 }
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "plugin update failed: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func gitCommand(args ...string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Stdout = os.Stdout
@@ -50,15 +42,15 @@ func update(dest, plugin string) {
 	to := filepath.Join(dest, string(base))
 	base.write("sync")
 	var args []string
-	if _, err := os.Stat(to); errors.Is(err, os.ErrNotExist) {
-		args = []string{"clone", "--quiet", plugin, to, "--single-branch"}
-	} else {
+	if PathExists(to) {
 		b, err := exec.Command("git", "-C", to, "rev-parse", "--abbrev-ref", "HEAD").Output()
 		if err != nil {
 			base.fail()
 			return
 		}
 		args = []string{"-C", to, "pull", "--quiet", "origin", strings.TrimSpace(string(b))}
+	} else {
+		args = []string{"clone", "--quiet", plugin, to, "--single-branch"}
 	}
 	if err := gitCommand(args...); err != nil {
 		base.fail()

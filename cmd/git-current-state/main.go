@@ -29,13 +29,6 @@ func (r result) write() {
 	fmt.Printf("-> %s (%s)\n", r.dir, r.cmd)
 }
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "current state failed: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func gitCommand(sub string, p path, args ...string) result {
 	resulting := result{cmd: sub, dir: p}
 	arguments := []string{sub}

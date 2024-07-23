@@ -30,13 +30,6 @@ type Config struct {
 	Library string
 }
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "data management failed: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func run() error {
 	args := os.Args
 	if len(args) < 2 {

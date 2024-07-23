@@ -14,13 +14,6 @@ type Config struct {
 	Tools []string
 }
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "go tooling update failed: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func run() error {
 	read, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", "gotools"))
 	if err != nil {

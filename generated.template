@@ -1,0 +1,34 @@
+// Package main handles various utility needs
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "%v", err)
+		os.Exit(1)
+	}
+}
+
+// ReadConfig will read a config file and unmarshal to JSON
+func ReadConfig(file string, obj any) error {
+	b, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", file))
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, obj)
+}
+
+// PathExists will indicate if a file/path exists
+func PathExists(file string) bool {
+	if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
+		return false
+	}
+	return true
+}

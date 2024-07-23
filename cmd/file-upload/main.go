@@ -151,13 +151,6 @@ func onError(text string, err error) {
 	fmt.Fprintf(os.Stderr, "%s (%v)", text, err)
 }
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "uploader failed: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func run() error {
 	home := os.Getenv("HOME")
 	read, err := os.ReadFile(filepath.Join(home, ".config", "etc", "uploads"))

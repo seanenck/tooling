@@ -8,8 +8,9 @@ all: $(TARGETS)
 clean:
 	rm -rf $(BUILD)
 
-$(TARGETS): go.mod $(shell find cmd/ -type f)
-	go build $(GOFLAGS) -o $@ cmd/$(shell basename $@)/main.go
+$(TARGETS): go.mod generated.template $(shell find cmd/ -type f)
+	cp generated.template cmd/$(shell basename $@)/generated.go
+	go build $(GOFLAGS) -o $@ cmd/$(shell basename $@)/*.go
 
 install: $(TARGETS)
 	@for file in $(shell ls $(BUILD)) ; do \

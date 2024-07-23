@@ -26,15 +26,8 @@ type (
 	}
 )
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "tooling failure: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func run() error {
-	if _, err := os.Stat("go.mod"); errors.Is(err, os.ErrNotExist) {
+	if !PathExists("go.mod") {
 		return errors.New("cowardly refusing to run outside go.mod root")
 	}
 	read, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", "golint"))

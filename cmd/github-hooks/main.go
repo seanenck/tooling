@@ -41,13 +41,6 @@ type (
 	}
 )
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "unable to configure hooks: %v", err)
-		os.Exit(1)
-	}
-}
-
 func run() error {
 	home := os.Getenv("HOME")
 	read, err := os.ReadFile(filepath.Join(home, ".config", "etc", "hooks"))

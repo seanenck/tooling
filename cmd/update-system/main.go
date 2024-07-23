@@ -23,13 +23,6 @@ type (
 	}
 )
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "updates failed: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func run() error {
 	read, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", "updates"))
 	if err != nil {

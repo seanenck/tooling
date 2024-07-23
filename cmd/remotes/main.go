@@ -4,7 +4,6 @@ package main
 import (
 	"bufio"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -19,13 +18,6 @@ type Config struct {
 	Remotes []string
 	State   string
 	Filter  []string
-}
-
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "remote check failed: %v\n", err)
-		os.Exit(1)
-	}
 }
 
 func differ(prefix rune, left, right []string) bool {
@@ -60,9 +52,7 @@ func run() error {
 	}
 	state := filepath.Join(home, cfg.State)
 	var had []string
-	if _, err := os.Stat(state); errors.Is(err, os.ErrNotExist) {
-		fmt.Println("initializing...")
-	} else {
+	if PathExists(state) {
 		last, err := os.ReadFile(state)
 		if err != nil {
 			return err
@@ -74,6 +64,8 @@ func run() error {
 			}
 			had = append(had, t)
 		}
+	} else {
+		fmt.Println("initializing...")
 	}
 	var now []string
 	for _, remote := range cfg.Remotes {

@@ -18,13 +18,6 @@ type Config struct {
 	Directories []string
 }
 
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "unable to read commit state: %v\n", err)
-		os.Exit(1)
-	}
-}
-
 func uncommit(stdout chan string, dir string) {
 	cmd := exec.Command("git", "current-state")
 	cmd.Dir = dir
