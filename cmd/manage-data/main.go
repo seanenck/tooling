@@ -14,7 +14,7 @@ import (
 
 const completion = `#!/usr/bin/env bash
 
-_manage-data() {
+_{{ $.Exe }}() {
   local cur
   cur=${COMP_WORDS[COMP_CWORD]}
   if [ "$COMP_CWORD" -eq 1 ]; then
@@ -22,7 +22,7 @@ _manage-data() {
   fi
 }
 
-complete -F _manage-data -o bashdefault manage-data`
+complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
 
 // Config handles tool configuration
 type Config struct {
@@ -54,10 +54,15 @@ func run() error {
 		opt = append(opt, f.Name())
 	}
 	if cmd == "completions" {
+		exe, err := os.Executable()
+		if err != nil {
+			return err
+		}
 		opts := strings.Join(opt, " ")
 		data := struct {
 			Options string
-		}{Options: opts}
+			Exe     string
+		}{Options: opts, Exe: filepath.Base(exe)}
 		t, err := template.New("t").Parse(completion)
 		if err != nil {
 			return err
