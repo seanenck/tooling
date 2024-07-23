@@ -91,7 +91,9 @@ func run() error {
 	for _, a := range all {
 		res := <-a
 		if res != "" {
-			results = append(results, fmt.Sprintf("%s%s", prefix, strings.ReplaceAll(res, home, "")))
+			for _, line := range strings.Split(res, "\n") {
+				results = append(results, fmt.Sprintf("%s%s", prefix, strings.Replace(line, home, "", 1)))
+			}
 		}
 	}
 	if len(results) > 0 {
