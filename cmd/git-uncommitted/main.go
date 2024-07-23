@@ -2,6 +2,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -11,6 +12,11 @@ import (
 	"strings"
 	"sync"
 )
+
+// Config handles tool configuration
+type Config struct {
+	Directories []string
+}
 
 func main() {
 	if err := run(); err != nil {
@@ -57,13 +63,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	var cfg Config
+	if err := json.Unmarshal(dirs, &cfg); err != nil {
+		return err
+	}
 	var wg sync.WaitGroup
 	var all []chan string
-	for _, l := range strings.Split(string(dirs), "\n") {
-		trimmed := strings.TrimSpace(l)
-		if trimmed == "" {
-			continue
-		}
+	for _, dir := range cfg.Directories {
 		wg.Add(1)
 		go func(d string) {
 			defer wg.Done()
@@ -79,7 +85,7 @@ func run() error {
 				}(filepath.Join(path, child.Name()), r)
 				all = append(all, r)
 			}
-		}(trimmed)
+		}(dir)
 	}
 	wg.Wait()
 	var results []string

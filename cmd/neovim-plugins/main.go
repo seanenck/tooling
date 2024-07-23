@@ -1,0 +1,93 @@
+// Package main provides neovim plugin help
+package main
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+	"sync"
+)
+
+type (
+	// Config handles tool configuration
+	Config struct {
+		Path    string
+		Plugins []string
+	}
+
+	// Plugin is a specific neovim plugin remote
+	Plugin string
+)
+
+func (p Plugin) write(text string) {
+	fmt.Printf("%s: %s\n", p, text)
+}
+
+func (p Plugin) fail() {
+	p.write("fail")
+}
+
+func main() {
+	if err := run(); err != nil {
+		fmt.Fprintf(os.Stderr, "plugin update failed: %v\n", err)
+		os.Exit(1)
+	}
+}
+
+func gitCommand(args ...string) error {
+	cmd := exec.Command("git", args...)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
+}
+
+func update(dest, plugin string) {
+	base := Plugin(filepath.Base(plugin))
+	to := filepath.Join(dest, string(base))
+	base.write("sync")
+	var args []string
+	if _, err := os.Stat(to); errors.Is(err, os.ErrNotExist) {
+		args = []string{"clone", "--quiet", plugin, to, "--single-branch"}
+	} else {
+		b, err := exec.Command("git", "-C", to, "rev-parse", "--abbrev-ref", "HEAD").Output()
+		if err != nil {
+			base.fail()
+			return
+		}
+		args = []string{"-C", to, "pull", "--quiet", "origin", strings.TrimSpace(string(b))}
+	}
+	if err := gitCommand(args...); err != nil {
+		base.fail()
+		return
+	}
+	base.write("done")
+}
+
+func run() error {
+	home := os.Getenv("HOME")
+	read, err := os.ReadFile(filepath.Join(home, ".config", "etc", "neovim-plugins"))
+	if err != nil {
+		return err
+	}
+	var cfg Config
+	if err := json.Unmarshal(read, &cfg); err != nil {
+		return err
+	}
+
+	dest := filepath.Join(home, cfg.Path)
+	var wg sync.WaitGroup
+	for _, plugin := range cfg.Plugins {
+		wg.Add(1)
+		go func(to, remote string) {
+			defer wg.Done()
+			update(to, remote)
+		}(dest, plugin)
+	}
+
+	wg.Wait()
+	return nil
+}
