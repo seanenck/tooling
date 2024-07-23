@@ -18,7 +18,7 @@ func main() {
 
 // ReadConfig will read a config file and unmarshal to JSON
 func ReadConfig(file string, obj any) error {
-	b, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", file))
+	b, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", fmt.Sprintf("%s.json", file)))
 	if err != nil {
 		return err
 	}
