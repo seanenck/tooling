@@ -2,7 +2,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -41,12 +40,8 @@ func run() error {
 		sub = args[2:]
 	}
 	home := os.Getenv("HOME")
-	read, err := os.ReadFile(filepath.Join(home, ".config", "etc", "data"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("data", &cfg); err != nil {
 		return err
 	}
 	lib := filepath.Join(home, cfg.Library)

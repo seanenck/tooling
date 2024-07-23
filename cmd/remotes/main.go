@@ -3,7 +3,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -34,12 +33,8 @@ func differ(prefix rune, left, right []string) bool {
 
 func run() error {
 	home := os.Getenv("HOME")
-	read, err := os.ReadFile(filepath.Join(home, ".config", "etc", "remotes"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("remotes", &cfg); err != nil {
 		return err
 	}
 	var filters []*regexp.Regexp

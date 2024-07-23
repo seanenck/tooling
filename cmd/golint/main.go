@@ -2,11 +2,9 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -30,12 +28,8 @@ func run() error {
 	if !PathExists("go.mod") {
 		return errors.New("cowardly refusing to run outside go.mod root")
 	}
-	read, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", "golint"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("golint", &cfg); err != nil {
 		return err
 	}
 	searched := false

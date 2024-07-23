@@ -2,7 +2,6 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -51,17 +50,14 @@ func run() error {
 		}
 		return nil
 	}
-	home := fmt.Sprintf("%s%c", os.Getenv("HOME"), os.PathSeparator)
-	dirs, err := os.ReadFile(filepath.Join(home, ".config", "etc", "uncommit"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(dirs, &cfg); err != nil {
+	if err := ReadConfig("uncommit", &cfg); err != nil {
 		return err
 	}
+
 	var wg sync.WaitGroup
 	var all []chan string
+	home := fmt.Sprintf("%s%c", os.Getenv("HOME"), os.PathSeparator)
 	for _, dir := range cfg.Directories {
 		wg.Add(1)
 		go func(d string) {

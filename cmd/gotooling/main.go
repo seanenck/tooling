@@ -2,11 +2,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 )
 
 // Config handles tool configuration
@@ -15,12 +13,8 @@ type Config struct {
 }
 
 func run() error {
-	read, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", "gotools"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("gotools", &cfg); err != nil {
 		return err
 	}
 	for _, tool := range cfg.Tools {

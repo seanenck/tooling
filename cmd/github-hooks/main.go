@@ -3,7 +3,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -43,12 +42,8 @@ type (
 
 func run() error {
 	home := os.Getenv("HOME")
-	read, err := os.ReadFile(filepath.Join(home, ".config", "etc", "hooks"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("hooks", &cfg); err != nil {
 		return err
 	}
 	path := filepath.Join(home, cfg.Path)

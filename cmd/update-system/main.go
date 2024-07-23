@@ -2,11 +2,9 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 )
 
@@ -24,12 +22,8 @@ type (
 )
 
 func run() error {
-	read, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", "updates"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("updates", &cfg); err != nil {
 		return err
 	}
 	for _, cmd := range cfg.Updates {

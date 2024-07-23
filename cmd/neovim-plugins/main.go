@@ -2,7 +2,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -61,12 +60,8 @@ func update(dest, plugin string) {
 
 func run() error {
 	home := os.Getenv("HOME")
-	read, err := os.ReadFile(filepath.Join(home, ".config", "etc", "neovim-plugins"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("neovim-plugins", &cfg); err != nil {
 		return err
 	}
 

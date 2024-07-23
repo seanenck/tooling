@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
-	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -152,16 +151,11 @@ func onError(text string, err error) {
 }
 
 func run() error {
-	home := os.Getenv("HOME")
-	read, err := os.ReadFile(filepath.Join(home, ".config", "etc", "uploads"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("uploads", &cfg); err != nil {
 		return err
 	}
-	store := filepath.Join(home, cfg.Store)
+	store := filepath.Join(os.Getenv("HOME"), cfg.Store)
 	downloadName := strings.ToLower(cfg.Store)
 	t, err := template.New("t").Parse(strings.Replace(indexHTML, downloadValue, downloadName, 1))
 	if err != nil {

@@ -3,7 +3,6 @@ package main
 
 import (
 	"crypto/sha256"
-	"encoding/json"
 	"fmt"
 	"io"
 	"os"
@@ -27,12 +26,8 @@ type (
 )
 
 func run() error {
-	read, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", "transcoding"))
-	if err != nil {
-		return err
-	}
 	var cfg Config
-	if err := json.Unmarshal(read, &cfg); err != nil {
+	if err := ReadConfig("transcoding", &cfg); err != nil {
 		return err
 	}
 	files, err := os.ReadDir(".")
@@ -90,6 +85,7 @@ func run() error {
 					}
 					args = append(args, use)
 				}
+				fmt.Printf("  %s -> %s\n", name, target)
 				c := exec.Command(run, args...)
 				c.Stdout = os.Stdout
 				c.Stderr = os.Stderr
