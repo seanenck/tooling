@@ -1,3 +1,4 @@
+// Package main handles various git uncommitted states for output
 package main
 
 import (

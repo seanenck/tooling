@@ -1,3 +1,4 @@
+// Package main handles current state for a git repo
 package main
 
 import (
