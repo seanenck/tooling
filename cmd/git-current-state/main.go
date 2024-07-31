@@ -99,18 +99,24 @@ func run() error {
 		results = append(results, r)
 	}
 
+	done := false
 	for _, r := range results {
 		read := <-r
 		if read.err != nil {
 			continue
 		}
 		if !read.ok {
-			if isQuick {
+			if isQuick && !done {
 				dirty()
-				return nil
+				done = true
 			}
-			read.write()
+			if !isQuick {
+				read.write()
+			}
 		}
+	}
+	if done {
+		return nil
 	}
 
 	if isQuick {
