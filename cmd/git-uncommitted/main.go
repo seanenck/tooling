@@ -68,10 +68,14 @@ func run() error {
 				return
 			}
 			for _, child := range children {
+				childPath := filepath.Join(path, child.Name())
+				if !PathExists(filepath.Join(childPath, ".git")) {
+					continue
+				}
 				r := make(chan string)
 				go func(dir string, out chan string) {
 					uncommit(out, dir)
-				}(filepath.Join(path, child.Name()), r)
+				}(childPath, r)
 				all = append(all, r)
 			}
 		}(dir)
