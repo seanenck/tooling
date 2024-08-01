@@ -1,6 +1,6 @@
 GOFLAGS := -trimpath -buildmode=pie -mod=readonly -modcacherw -buildvcs=false
 BUILD   := build/
-TARGETS := $(addprefix $(BUILD),$(shell ls cmd/))
+TARGETS := $(addprefix $(BUILD),$(shell ls app/))
 DESTDIR := $(HOME)/.local/bin/
 
 all: $(TARGETS)
@@ -8,9 +8,9 @@ all: $(TARGETS)
 clean:
 	rm -rf $(BUILD)
 
-$(TARGETS): go.mod generated.template $(shell find cmd/ -type f)
-	cp generated.template cmd/$(shell basename $@)/generated.go
-	go build $(GOFLAGS) -o $@ cmd/$(shell basename $@)/*.go
+$(TARGETS): go.mod generated.template $(shell find app/ -type f)
+	cp generated.template app/$(shell basename $@)/generated.go
+	go build $(GOFLAGS) -o $@ app/$(shell basename $@)/*.go
 
 install: $(TARGETS)
 	@for file in $(shell ls $(BUILD)) ; do \
