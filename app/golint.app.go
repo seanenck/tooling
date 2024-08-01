@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-func run() error {
+func GolintApp() error {
 	if !PathExists("go.mod") {
 		return errors.New("cowardly refusing to run outside go.mod root")
 	}

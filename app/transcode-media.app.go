@@ -13,7 +13,7 @@ import (
 	"time"
 )
 
-func run() error {
+func TranscodeMediaApp() error {
 	cfg := struct {
 		Transcode []struct {
 			Extensions []string

@@ -52,7 +52,7 @@ func gitCommand(sub string, p gitPath, args ...string) gitStatus {
 	return resulting
 }
 
-func run() error {
+func GitCurrentStateApp() error {
 	quick := flag.Bool("quick", false, "quickly exit on first issue")
 	flag.Parse()
 	dir, err := os.Getwd()

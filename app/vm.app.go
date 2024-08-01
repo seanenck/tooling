@@ -12,7 +12,7 @@ import (
 	"text/template"
 )
 
-func run() error {
+func VmApp() error {
 	const (
 		jsonFile      = ".json"
 		screenName    = "vfu-vm-%s"

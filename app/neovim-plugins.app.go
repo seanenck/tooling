@@ -30,7 +30,7 @@ func gitCommand(args ...string) error {
 	return cmd.Run()
 }
 
-func update(dest, plugin string) {
+func updatePlugin(dest, plugin string) {
 	base := Plugin(filepath.Base(plugin))
 	to := filepath.Join(dest, string(base))
 	base.write("sync")
@@ -52,7 +52,7 @@ func update(dest, plugin string) {
 	base.write("done")
 }
 
-func run() error {
+func NeovimPluginsApp() error {
 	home := os.Getenv("HOME")
 	cfg := struct {
 		Path    string
@@ -68,7 +68,7 @@ func run() error {
 		wg.Add(1)
 		go func(to, remote string) {
 			defer wg.Done()
-			update(to, remote)
+			updatePlugin(to, remote)
 		}(dest, plugin)
 	}
 

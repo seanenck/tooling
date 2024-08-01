@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-func run() error {
+func UpdateSystemApp() error {
 	cfg := struct {
 		Updates []struct {
 			Detect  string

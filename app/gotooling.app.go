@@ -7,7 +7,7 @@ import (
 	"os/exec"
 )
 
-func run() error {
+func GotoolingApp() error {
 	cfg := struct {
 		Tools []string
 	}{}

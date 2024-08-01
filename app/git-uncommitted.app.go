@@ -27,7 +27,7 @@ func uncommit(stdout chan string, dir string) {
 	stdout <- ""
 }
 
-func run() error {
+func GitUncommittedApp() error {
 	mode := flag.String("mode", "", "operating mode")
 	flag.Parse()
 	op := *mode

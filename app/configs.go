@@ -3,22 +3,10 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 )
-
-const (
-	completionKeyword = "completions"
-)
-
-func main() {
-	if err := run(); err != nil {
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
-	}
-}
 
 // ReadConfig will read a config file and unmarshal to JSON
 func ReadConfig(file string, obj any) error {
@@ -27,12 +15,4 @@ func ReadConfig(file string, obj any) error {
 		return err
 	}
 	return json.Unmarshal(b, obj)
-}
-
-// PathExists will indicate if a file/path exists
-func PathExists(file string) bool {
-	if _, err := os.Stat(file); errors.Is(err, os.ErrNotExist) {
-		return false
-	}
-	return true
 }

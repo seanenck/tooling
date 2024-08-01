@@ -11,7 +11,7 @@ import (
 	"text/template"
 )
 
-func run() error {
+func GithubHooksApp() error {
 	home := os.Getenv("HOME")
 	cfg := struct {
 		Path            string

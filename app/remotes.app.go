@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-func run() error {
+func RemotesApp() error {
 	home := os.Getenv("HOME")
 	cfg := struct {
 		Remotes []string

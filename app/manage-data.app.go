@@ -12,7 +12,7 @@ import (
 	"text/template"
 )
 
-func run() error {
+func ManageDataApp() error {
 	args := os.Args
 	if len(args) < 2 {
 		return errors.New("invalid command")
