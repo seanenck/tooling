@@ -58,7 +58,7 @@ func VirtApp() error {
 			fmt.Println(item)
 		}
 		return nil
-	case completionKeyword:
+	case CompletionKeyword:
 		exe, err := os.Executable()
 		if err != nil {
 			return err

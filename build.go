@@ -3,6 +3,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
 	"fmt"
 	"os"
 	"os/exec"
@@ -15,7 +16,6 @@ const (
 	appDir   = "app"
 	appFile  = ".app.go"
 	buildDir = "target"
-	tmpDir   = "tmp"
 	mainText = `// Package main handles {{ .App }}
 package main
 
@@ -29,7 +29,8 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
-}`
+}
+`
 )
 
 var (
@@ -144,7 +145,7 @@ func build() error {
 		if err == nil {
 			building = false
 			mod := stat.ModTime()
-			checks := []string{"go.mod"}
+			checks := []string{"go.mod", "build.go"}
 			checks = append(checks, src...)
 			for _, f := range checks {
 				info, err := os.Stat(f)
@@ -162,11 +163,6 @@ func build() error {
 			continue
 		}
 
-		tmp := filepath.Join(buildDir, tmpDir)
-		os.RemoveAll(tmp)
-		if err := mkDirP(tmp); err != nil {
-			return err
-		}
 		isUpper := true
 		properName := ""
 		for _, r := range target {
@@ -194,6 +190,16 @@ func build() error {
 		if err := tmpl.Execute(&buf, app); err != nil {
 			return err
 		}
+		hasher := sha256.New()
+		if _, err := hasher.Write([]byte(properName)); err != nil {
+			return err
+		}
+		hash := hasher.Sum(nil)
+		tmp := filepath.Join(buildDir, "src", fmt.Sprintf("%x", hash)[0:7])
+		os.RemoveAll(tmp)
+		if err := mkDirP(tmp); err != nil {
+			return err
+		}
 		mainFile := filepath.Join(tmp, "main.go")
 		if err := os.WriteFile(mainFile, buf.Bytes(), 0o644); err != nil {
 			return err
@@ -214,7 +220,6 @@ func build() error {
 		if err := runCommand("go", args...); err != nil {
 			return err
 		}
-		os.RemoveAll(tmp)
 		fmt.Printf("built")
 	}
 	fmt.Println("\n\nbuild completed")

@@ -39,7 +39,7 @@ func ManageDataApp() error {
 	for _, f := range files {
 		opt = append(opt, f.Name())
 	}
-	if cmd == completionKeyword {
+	if cmd == CompletionKeyword {
 		exe, err := os.Executable()
 		if err != nil {
 			return err

@@ -2,5 +2,6 @@
 package main
 
 const (
-	completionKeyword = "completions"
+	// CompletionKeyword is the common completion keyword for bash completions
+	CompletionKeyword = "completions"
 )
