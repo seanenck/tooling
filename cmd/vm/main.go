@@ -67,7 +67,9 @@ func run() error {
 			Options string
 			Start   string
 		}{Start: startCommand, Exe: filepath.Base(exe), List: listCommand, Options: strings.Join([]string{listCommand, statusCommand, startCommand}, " ")}
-		t, err := template.New("t").Parse(`_{{ $.Exe }}() {
+		t, err := template.New("t").Parse(`#!/usr/bin/env bash
+
+_{{ $.Exe }}() {
   local cur opts
   cur=${COMP_WORDS[COMP_CWORD]}
   if [ "$COMP_CWORD" -eq 1 ]; then
