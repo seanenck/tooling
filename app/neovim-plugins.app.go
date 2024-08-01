@@ -58,7 +58,7 @@ func NeovimPluginsApp() error {
 		Path    string
 		Plugins []string
 	}{}
-	if err := ReadConfig("neovim-plugins", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 

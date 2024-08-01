@@ -49,7 +49,7 @@ func GitUncommittedApp() error {
 	cfg := struct {
 		Directories []string
 	}{}
-	if err := ReadConfig("uncommit", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 

@@ -20,7 +20,7 @@ func RemotesApp() error {
 		State   string
 		Filter  []string
 	}{}
-	if err := ReadConfig("remotes", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 	var filters []*regexp.Regexp

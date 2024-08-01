@@ -27,7 +27,7 @@ func ManageDataApp() error {
 	cfg := struct {
 		Library string
 	}{}
-	if err := ReadConfig("data", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 	lib := filepath.Join(home, cfg.Library)

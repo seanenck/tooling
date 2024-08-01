@@ -25,7 +25,7 @@ func GolintApp() error {
 	cfg := struct {
 		Tools []Tool
 	}{}
-	if err := ReadConfig("golint", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 	searched := false

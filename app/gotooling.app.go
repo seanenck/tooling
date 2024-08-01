@@ -12,7 +12,7 @@ func GotoolingApp() error {
 	cfg := struct {
 		Tools []string
 	}{}
-	if err := ReadConfig("gotools", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 	for _, tool := range cfg.Tools {

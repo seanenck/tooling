@@ -21,7 +21,7 @@ func TranscodeMediaApp() error {
 			Command    []string
 		}
 	}{}
-	if err := ReadConfig("transcoding", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 	files, err := os.ReadDir(".")

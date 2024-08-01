@@ -9,8 +9,12 @@ import (
 )
 
 // ReadConfig will read a config file and unmarshal to JSON
-func ReadConfig(file string, obj any) error {
-	b, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", fmt.Sprintf("%s.json", file)))
+func ReadConfig(obj any) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	b, err := os.ReadFile(filepath.Join(os.Getenv("HOME"), ".config", "etc", fmt.Sprintf("%s.json", filepath.Base(exe))))
 	if err != nil {
 		return err
 	}

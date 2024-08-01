@@ -147,7 +147,7 @@ func FileUploadApp() error {
 		Store      string
 		Extensions []string
 	}{}
-	if err := ReadConfig("uploads", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 	store := filepath.Join(os.Getenv("HOME"), cfg.Store)

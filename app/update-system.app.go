@@ -16,7 +16,7 @@ func UpdateSystemApp() error {
 			Command []string
 		}
 	}{}
-	if err := ReadConfig("updates", &cfg); err != nil {
+	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 	for _, cmd := range cfg.Updates {
