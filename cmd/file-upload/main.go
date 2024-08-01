@@ -18,6 +18,7 @@ import (
 const (
 	downloadValue = "{DOWNLOAD}"
 	isUpload      = "/store"
+	isUploadTo    = isUpload + "to"
 	indexHTML     = `<!doctype html>
 <html lang="en">
 <head>
@@ -67,7 +68,7 @@ body
     <form
       id="form"
       enctype="multipart/form-data"
-      action="/storeto"
+      action="` + isUploadTo + `"
       method="POST"
     >
       <input class="input file-input" type="file" name="file" multiple />
@@ -88,13 +89,6 @@ body
 </body>
 </html>`
 )
-
-// Config handles tool configuration
-type Config struct {
-	Bind       string
-	Store      string
-	Extensions []string
-}
 
 func uploadHandler(store string, extensions []string, r *http.Request) error {
 	if r.Method != "POST" {
@@ -146,12 +140,12 @@ func uploadHandler(store string, extensions []string, r *http.Request) error {
 	return nil
 }
 
-func onError(text string, err error) {
-	fmt.Fprintf(os.Stderr, "%s (%v)", text, err)
-}
-
 func run() error {
-	var cfg Config
+	cfg := struct {
+		Bind       string
+		Store      string
+		Extensions []string
+	}{}
 	if err := ReadConfig("uploads", &cfg); err != nil {
 		return err
 	}
@@ -161,8 +155,11 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	onError := func(text string, err error) {
+		fmt.Fprintf(os.Stderr, "%s (%v)", text, err)
+	}
 	router := http.NewServeMux()
-	router.HandleFunc(isUpload+"to", func(w http.ResponseWriter, r *http.Request) {
+	router.HandleFunc(isUploadTo, func(w http.ResponseWriter, r *http.Request) {
 		if err := uploadHandler(store, cfg.Extensions, r); err != nil {
 			onError("upload error", err)
 		}

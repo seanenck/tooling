@@ -12,11 +12,6 @@ import (
 	"sync"
 )
 
-// Config handles tool configuration
-type Config struct {
-	Directories []string
-}
-
 func uncommit(stdout chan string, dir string) {
 	cmd := exec.Command("git", "current-state")
 	cmd.Dir = dir
@@ -50,7 +45,9 @@ func run() error {
 		}
 		return nil
 	}
-	var cfg Config
+	cfg := struct {
+		Directories []string
+	}{}
 	if err := ReadConfig("uncommit", &cfg); err != nil {
 		return err
 	}

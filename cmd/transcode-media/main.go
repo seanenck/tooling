@@ -13,20 +13,13 @@ import (
 	"time"
 )
 
-type (
-	// Config handles tooling configuration
-	Config struct {
-		Transcode []Transcode
-	}
-	// Transcode is transode method for extensions
-	Transcode struct {
-		Extensions []string
-		Command    []string
-	}
-)
-
 func run() error {
-	var cfg Config
+	cfg := struct {
+		Transcode []struct {
+			Extensions []string
+			Command    []string
+		}
+	}{}
 	if err := ReadConfig("transcoding", &cfg); err != nil {
 		return err
 	}

@@ -10,25 +10,20 @@ import (
 	"strings"
 )
 
-type (
-	// Config handles tool configuration
-	Config struct {
-		Tools []Tool
-	}
-
-	// Tool indicates how to handle go tools
-	Tool struct {
-		Name    string
-		Detect  bool
-		Command []string
-	}
-)
-
 func run() error {
 	if !PathExists("go.mod") {
 		return errors.New("cowardly refusing to run outside go.mod root")
 	}
-	var cfg Config
+	type (
+		Tool struct {
+			Name    string
+			Detect  bool
+			Command []string
+		}
+	)
+	cfg := struct {
+		Tools []Tool
+	}{}
 	if err := ReadConfig("golint", &cfg); err != nil {
 		return err
 	}

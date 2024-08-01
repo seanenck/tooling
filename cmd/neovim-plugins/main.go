@@ -11,12 +11,6 @@ import (
 )
 
 type (
-	// Config handles tool configuration
-	Config struct {
-		Path    string
-		Plugins []string
-	}
-
 	// Plugin is a specific neovim plugin remote
 	Plugin string
 )
@@ -60,7 +54,10 @@ func update(dest, plugin string) {
 
 func run() error {
 	home := os.Getenv("HOME")
-	var cfg Config
+	cfg := struct {
+		Path    string
+		Plugins []string
+	}{}
 	if err := ReadConfig("neovim-plugins", &cfg); err != nil {
 		return err
 	}

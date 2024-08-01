@@ -11,26 +11,26 @@ import (
 )
 
 const (
-	statusCommand = "status"
-	branchCommand = "branch"
+	gitStatusCommand = "status"
+	gitBranchCommand = "branch"
 )
 
 type (
-	result struct {
+	gitStatus struct {
 		cmd string
 		ok  bool
 		err error
-		dir path
+		dir gitPath
 	}
-	path string
+	gitPath string
 )
 
-func (r result) write() {
+func (r gitStatus) write() {
 	fmt.Printf("-> %s (%s)\n", r.dir, r.cmd)
 }
 
-func gitCommand(sub string, p path, args ...string) result {
-	resulting := result{cmd: sub, dir: p}
+func gitCommand(sub string, p gitPath, args ...string) gitStatus {
+	resulting := gitStatus{cmd: sub, dir: p}
 	arguments := []string{sub}
 	arguments = append(arguments, args...)
 	cmd := exec.Command("git", arguments...)
@@ -39,9 +39,9 @@ func gitCommand(sub string, p path, args ...string) result {
 	if err == nil {
 		trimmed := strings.TrimSpace(string(out))
 		switch sub {
-		case statusCommand:
+		case gitStatusCommand:
 			resulting.ok = !strings.Contains(trimmed, "[ahead")
-		case branchCommand:
+		case gitBranchCommand:
 			resulting.ok = strings.Contains(trimmed, "main") || strings.Contains(trimmed, "master")
 		default:
 			resulting.ok = trimmed == ""
@@ -52,18 +52,6 @@ func gitCommand(sub string, p path, args ...string) result {
 	return resulting
 }
 
-func gitCommandAsync(res chan result, sub string, p path, args ...string) {
-	res <- gitCommand(sub, p, args...)
-}
-
-func color(text string, mode int) {
-	fmt.Printf("\x1b[%dm(%s)\x1b[0m", mode, text)
-}
-
-func dirty() {
-	color("dirty", 31)
-}
-
 func run() error {
 	quick := flag.Bool("quick", false, "quickly exit on first issue")
 	flag.Parse()
@@ -71,7 +59,13 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	directory := path(dir)
+	color := func(text string, mode int) {
+		fmt.Printf("\x1b[%dm(%s)\x1b[0m", mode, text)
+	}
+	dirty := func() {
+		color("dirty", 31)
+	}
+	directory := gitPath(dir)
 	if directory == "" {
 		return errors.New("directory must be set")
 	}
@@ -87,14 +81,17 @@ func run() error {
 		}
 		r.write()
 	}
-	var results []chan result
+	gitCommandAsync := func(res chan gitStatus, sub string, p gitPath, args ...string) {
+		res <- gitCommand(sub, p, args...)
+	}
+	var results []chan gitStatus
 	for sub, cmd := range map[string][]string{
-		"diff-index":  {"--name-only", "HEAD", "--"},
-		statusCommand: {"-sb"},
-		"ls-files":    {"--other", "--exclude-standard"},
-		branchCommand: {"--show-current"},
+		"diff-index":     {"--name-only", "HEAD", "--"},
+		gitStatusCommand: {"-sb"},
+		"ls-files":       {"--other", "--exclude-standard"},
+		gitBranchCommand: {"--show-current"},
 	} {
-		r := make(chan result)
+		r := make(chan gitStatus)
 		go gitCommandAsync(r, sub, directory, cmd...)
 		results = append(results, r)
 	}

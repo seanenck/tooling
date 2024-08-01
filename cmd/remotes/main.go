@@ -12,28 +12,13 @@ import (
 	"strings"
 )
 
-// Config handles tool configuration
-type Config struct {
-	Remotes []string
-	State   string
-	Filter  []string
-}
-
-func differ(prefix rune, left, right []string) bool {
-	status := false
-	for _, item := range left {
-		if slices.Contains(right, item) {
-			continue
-		}
-		fmt.Printf("%c %s\n", prefix, item)
-		status = true
-	}
-	return status
-}
-
 func run() error {
 	home := os.Getenv("HOME")
-	var cfg Config
+	cfg := struct {
+		Remotes []string
+		State   string
+		Filter  []string
+	}{}
 	if err := ReadConfig("remotes", &cfg); err != nil {
 		return err
 	}
@@ -93,6 +78,18 @@ func run() error {
 	}
 
 	if len(had) > 0 {
+		differ := func(prefix rune, left, right []string) bool {
+			status := false
+			for _, item := range left {
+				if slices.Contains(right, item) {
+					continue
+				}
+				fmt.Printf("%c %s\n", prefix, item)
+				status = true
+			}
+			return status
+		}
+
 		older := differ('-', had, now)
 		newer := differ('+', now, had)
 		if older || newer {

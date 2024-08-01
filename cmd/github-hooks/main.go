@@ -11,8 +11,22 @@ import (
 	"text/template"
 )
 
-const postReceive = `
-#!/bin/sh
+func run() error {
+	home := os.Getenv("HOME")
+	cfg := struct {
+		Path            string
+		User            string
+		PasswordCommand []string
+	}{}
+	if err := ReadConfig("hooks", &cfg); err != nil {
+		return err
+	}
+	path := filepath.Join(home, cfg.Path)
+	dirs, err := os.ReadDir(path)
+	if err != nil {
+		return err
+	}
+	t, err := template.New("t").Parse(`#!/bin/sh
 for OBJECT in all tags; do
     if ! git -C "{{ $.Path }}" push --$OBJECT "https://{{ $.Token }}@github.com/seanenck/{{ $.Name }}"; then
         echo
@@ -22,36 +36,7 @@ for OBJECT in all tags; do
         echo
         exit 1
     fi
-done
-`
-
-type (
-	// Config handles tool configuration
-	Config struct {
-		Path            string
-		User            string
-		PasswordCommand []string
-	}
-	// Data handles templating output hook files
-	Data struct {
-		Path  string
-		Name  string
-		Token string
-	}
-)
-
-func run() error {
-	home := os.Getenv("HOME")
-	var cfg Config
-	if err := ReadConfig("hooks", &cfg); err != nil {
-		return err
-	}
-	path := filepath.Join(home, cfg.Path)
-	dirs, err := os.ReadDir(path)
-	if err != nil {
-		return err
-	}
-	t, err := template.New("t").Parse(strings.TrimSpace(postReceive))
+done`)
 	if err != nil {
 		return err
 	}
@@ -70,7 +55,11 @@ func run() error {
 		if !d.IsDir() {
 			continue
 		}
-		obj := Data{Name: d.Name()}
+		obj := struct {
+			Path  string
+			Name  string
+			Token string
+		}{Name: d.Name()}
 		obj.Path = filepath.Join(path, obj.Name)
 		obj.Token = token
 		hook := filepath.Join(obj.Path, "hooks", "post-receive")

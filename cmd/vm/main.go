@@ -12,39 +12,15 @@ import (
 	"text/template"
 )
 
-const (
-	jsonFile      = ".json"
-	screenName    = "vfu-vm-%s"
-	startCommand  = "start"
-	statusCommand = "status"
-	listCommand   = "list"
-	completion    = `
-_{{ $.Exe }}() {
-  local cur opts
-  cur=${COMP_WORDS[COMP_CWORD]}
-  if [ "$COMP_CWORD" -eq 1 ]; then
-    COMPREPLY=( $(compgen -W "{{ $.Options }}" -- "$cur") )
-  else
-    if [ "$COMP_CWORD" -eq 2 ]; then
-      case "${COMP_WORDS[1]}" in
-        "{{ $.Start }}")
-          COMPREPLY=( $(compgen -W "$({{ $.Exe }} {{ $.List }})" -- "$cur") )
-          ;;
-      esac
-    fi
-  fi
-}
-
-complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}
-`
-)
-
-// Config handles tool configuration
-type Config struct {
-	Directory string
-}
-
 func run() error {
+	const (
+		jsonFile      = ".json"
+		screenName    = "vfu-vm-%s"
+		startCommand  = "start"
+		statusCommand = "status"
+		listCommand   = "list"
+	)
+
 	args := os.Args
 	var cmd string
 	var sub string
@@ -55,7 +31,9 @@ func run() error {
 	default:
 		return errors.New("invalid argument passed")
 	}
-	var cfg Config
+	cfg := struct {
+		Directory string
+	}{}
 	if err := ReadConfig("vm", &cfg); err != nil {
 		return err
 	}
@@ -89,7 +67,23 @@ func run() error {
 			Options string
 			Start   string
 		}{Start: startCommand, Exe: filepath.Base(exe), List: listCommand, Options: strings.Join([]string{listCommand, statusCommand, startCommand}, " ")}
-		t, err := template.New("t").Parse(completion)
+		t, err := template.New("t").Parse(`_{{ $.Exe }}() {
+  local cur opts
+  cur=${COMP_WORDS[COMP_CWORD]}
+  if [ "$COMP_CWORD" -eq 1 ]; then
+    COMPREPLY=( $(compgen -W "{{ $.Options }}" -- "$cur") )
+  else
+    if [ "$COMP_CWORD" -eq 2 ]; then
+      case "${COMP_WORDS[1]}" in
+        "{{ $.Start }}")
+          COMPREPLY=( $(compgen -W "$({{ $.Exe }} {{ $.List }})" -- "$cur") )
+          ;;
+      esac
+    fi
+  fi
+}
+
+complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
 		if err != nil {
 			return err
 		}

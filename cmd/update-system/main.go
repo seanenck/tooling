@@ -8,21 +8,13 @@ import (
 	"strings"
 )
 
-type (
-	// Config handles tool configuration
-	Config struct {
-		Updates []Command
-	}
-
-	// Command defines how to detect a update system and run it
-	Command struct {
-		Detect  string
-		Command []string
-	}
-)
-
 func run() error {
-	var cfg Config
+	cfg := struct {
+		Updates []struct {
+			Detect  string
+			Command []string
+		}
+	}{}
 	if err := ReadConfig("updates", &cfg); err != nil {
 		return err
 	}

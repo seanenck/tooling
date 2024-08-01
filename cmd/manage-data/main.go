@@ -12,23 +12,6 @@ import (
 	"text/template"
 )
 
-const completion = `#!/usr/bin/env bash
-
-_{{ $.Exe }}() {
-  local cur
-  cur=${COMP_WORDS[COMP_CWORD]}
-  if [ "$COMP_CWORD" -eq 1 ]; then
-    COMPREPLY=( $(compgen -W "{{ $.Options }}" -- "$cur") )
-  fi
-}
-
-complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
-
-// Config handles tool configuration
-type Config struct {
-	Library string
-}
-
 func run() error {
 	args := os.Args
 	if len(args) < 2 {
@@ -40,7 +23,9 @@ func run() error {
 		sub = args[2:]
 	}
 	home := os.Getenv("HOME")
-	var cfg Config
+	cfg := struct {
+		Library string
+	}{}
 	if err := ReadConfig("data", &cfg); err != nil {
 		return err
 	}
@@ -63,7 +48,17 @@ func run() error {
 			Options string
 			Exe     string
 		}{Options: opts, Exe: filepath.Base(exe)}
-		t, err := template.New("t").Parse(completion)
+		t, err := template.New("t").Parse(`#!/usr/bin/env bash
+
+_{{ $.Exe }}() {
+  local cur
+  cur=${COMP_WORDS[COMP_CWORD]}
+  if [ "$COMP_CWORD" -eq 1 ]; then
+    COMPREPLY=( $(compgen -W "{{ $.Options }}" -- "$cur") )
+  fi
+}
+
+complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
 		if err != nil {
 			return err
 		}

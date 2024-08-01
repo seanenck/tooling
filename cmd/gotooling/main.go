@@ -7,13 +7,10 @@ import (
 	"os/exec"
 )
 
-// Config handles tool configuration
-type Config struct {
-	Tools []string
-}
-
 func run() error {
-	var cfg Config
+	cfg := struct {
+		Tools []string
+	}{}
 	if err := ReadConfig("gotools", &cfg); err != nil {
 		return err
 	}
