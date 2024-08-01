@@ -56,7 +56,7 @@ func run() error {
 			fmt.Println(item)
 		}
 		return nil
-	case "completions":
+	case completionKeyword:
 		exe, err := os.Executable()
 		if err != nil {
 			return err

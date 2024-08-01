@@ -9,6 +9,10 @@ import (
 	"path/filepath"
 )
 
+const (
+	completionKeyword = "completions"
+)
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)

@@ -38,7 +38,7 @@ func run() error {
 	for _, f := range files {
 		opt = append(opt, f.Name())
 	}
-	if cmd == "completions" {
+	if cmd == completionKeyword {
 		exe, err := os.Executable()
 		if err != nil {
 			return err
