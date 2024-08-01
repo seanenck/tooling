@@ -7,6 +7,7 @@ import (
 	"os/exec"
 )
 
+// GotoolingApp handles installing/updating go tools
 func GotoolingApp() error {
 	cfg := struct {
 		Tools []string

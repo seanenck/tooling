@@ -12,6 +12,7 @@ import (
 	"text/template"
 )
 
+// ManageDataApp handles management of data (wrappers)
 func ManageDataApp() error {
 	args := os.Args
 	if len(args) < 2 {

@@ -12,6 +12,7 @@ import (
 	"strings"
 )
 
+// RemotesApp helps sync release tags from remotes for update tracking
 func RemotesApp() error {
 	home := os.Getenv("HOME")
 	cfg := struct {

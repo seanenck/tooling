@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// UpdateSystemApp handles system update calls
 func UpdateSystemApp() error {
 	cfg := struct {
 		Updates []struct {

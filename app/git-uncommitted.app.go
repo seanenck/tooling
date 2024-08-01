@@ -27,6 +27,7 @@ func uncommit(stdout chan string, dir string) {
 	stdout <- ""
 }
 
+// GitUncommittedApp handles a summary of repositories across a set of directories
 func GitUncommittedApp() error {
 	mode := flag.String("mode", "", "operating mode")
 	flag.Parse()

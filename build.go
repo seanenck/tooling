@@ -187,7 +187,6 @@ func build() error {
 			return fmt.Errorf("unable to parse target proper name: %s", target)
 		}
 		properName = fmt.Sprintf("%sApp", properName)
-		fmt.Printf("%s -> ", properName)
 		app := struct {
 			App string
 		}{properName}
@@ -215,6 +214,7 @@ func build() error {
 		if err := runCommand("go", args...); err != nil {
 			return err
 		}
+		os.RemoveAll(tmp)
 		fmt.Printf("built")
 	}
 	fmt.Println("\n\nbuild completed")

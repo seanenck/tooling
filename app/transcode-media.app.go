@@ -13,6 +13,7 @@ import (
 	"time"
 )
 
+// TranscodeMediaApp handles transcoding of media to other formats in mass
 func TranscodeMediaApp() error {
 	cfg := struct {
 		Transcode []struct {

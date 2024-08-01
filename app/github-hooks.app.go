@@ -11,6 +11,7 @@ import (
 	"text/template"
 )
 
+// GithubHooksApp generates hooks for auto-pushing
 func GithubHooksApp() error {
 	home := os.Getenv("HOME")
 	cfg := struct {

@@ -52,6 +52,7 @@ func gitCommand(sub string, p gitPath, args ...string) gitStatus {
 	return resulting
 }
 
+// GitCurrentStateApp handles reporting state of git status for current directory
 func GitCurrentStateApp() error {
 	quick := flag.Bool("quick", false, "quickly exit on first issue")
 	flag.Parse()

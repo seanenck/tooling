@@ -23,13 +23,6 @@ func (p Plugin) fail() {
 	p.write("fail")
 }
 
-func gitCommand(args ...string) error {
-	cmd := exec.Command("git", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
-}
-
 func updatePlugin(dest, plugin string) {
 	base := Plugin(filepath.Base(plugin))
 	to := filepath.Join(dest, string(base))
@@ -45,13 +38,20 @@ func updatePlugin(dest, plugin string) {
 	} else {
 		args = []string{"clone", "--quiet", plugin, to, "--single-branch"}
 	}
-	if err := gitCommand(args...); err != nil {
+	git := func(args ...string) error {
+		cmd := exec.Command("git", args...)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		return cmd.Run()
+	}
+	if err := git(args...); err != nil {
 		base.fail()
 		return
 	}
 	base.write("done")
 }
 
+// NeovimPluginsApp handles getting/updating neovim plugins
 func NeovimPluginsApp() error {
 	home := os.Getenv("HOME")
 	cfg := struct {

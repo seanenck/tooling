@@ -10,6 +10,7 @@ import (
 	"strings"
 )
 
+// GolintApp handles golint wrapping of tools
 func GolintApp() error {
 	if !PathExists("go.mod") {
 		return errors.New("cowardly refusing to run outside go.mod root")

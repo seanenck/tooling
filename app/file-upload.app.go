@@ -140,6 +140,7 @@ func uploadHandler(store string, extensions []string, r *http.Request) error {
 	return nil
 }
 
+// FileUploadApp handles file upload helper
 func FileUploadApp() error {
 	cfg := struct {
 		Bind       string
