@@ -7,12 +7,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"slices"
 	"strings"
-)
-
-const (
-	gitStatusCommand = "status"
-	gitBranchCommand = "branch"
 )
 
 type (
@@ -29,7 +25,7 @@ func (r gitStatus) write() {
 	fmt.Printf("-> %s (%s)\n", r.dir, r.cmd)
 }
 
-func gitCommand(sub string, p gitPath, args ...string) gitStatus {
+func gitCommand(sub string, p gitPath, filter []string, args ...string) gitStatus {
 	resulting := gitStatus{cmd: sub, dir: p}
 	arguments := []string{sub}
 	arguments = append(arguments, args...)
@@ -38,13 +34,10 @@ func gitCommand(sub string, p gitPath, args ...string) gitStatus {
 	out, err := cmd.Output()
 	if err == nil {
 		trimmed := strings.TrimSpace(string(out))
-		switch sub {
-		case gitStatusCommand:
-			resulting.ok = !strings.Contains(trimmed, "[ahead")
-		case gitBranchCommand:
-			resulting.ok = strings.Contains(trimmed, "main") || strings.Contains(trimmed, "master")
-		default:
+		if len(filter) == 0 {
 			resulting.ok = trimmed == ""
+		} else {
+			resulting.ok = slices.Contains(filter, trimmed)
 		}
 	} else {
 		resulting.err = err
@@ -55,7 +48,13 @@ func gitCommand(sub string, p gitPath, args ...string) gitStatus {
 // GitCurrentStateApp handles reporting state of git status for current directory
 func GitCurrentStateApp() error {
 	quick := flag.Bool("quick", false, "quickly exit on first issue")
+	branches := flag.String("default-branches", "main,master", "default branch names")
 	flag.Parse()
+	var useBranches []string
+	branching := strings.TrimSpace(*branches)
+	if branching != "" {
+		useBranches = strings.Split(branching, ",")
+	}
 	dir, err := os.Getwd()
 	if err != nil {
 		return err
@@ -71,7 +70,7 @@ func GitCurrentStateApp() error {
 		return errors.New("directory must be set")
 	}
 	isQuick := *quick
-	r := gitCommand("update-index", directory, "-q", "--refresh")
+	r := gitCommand("update-index", directory, []string{}, "-q", "--refresh")
 	if r.err != nil {
 		return r.err
 	}
@@ -82,16 +81,24 @@ func GitCurrentStateApp() error {
 		}
 		r.write()
 	}
+	isBranch := "branch"
 	gitCommandAsync := func(res chan gitStatus, sub string, p gitPath, args ...string) {
-		res <- gitCommand(sub, p, args...)
+		filter := []string{}
+		if sub == isBranch {
+			filter = useBranches
+		}
+		res <- gitCommand(sub, p, filter, args...)
+	}
+	cmds := map[string][]string{
+		"diff-index": {"--name-only", "HEAD", "--"},
+		"log":        {"--branches", "--not", "--remotes", "-n", "1"},
+		"ls-files":   {"--others", "--exclude-standard", "--directory", "--no-empty-directory"},
+	}
+	if len(useBranches) > 0 {
+		cmds[isBranch] = []string{"--show-current"}
 	}
 	var results []chan gitStatus
-	for sub, cmd := range map[string][]string{
-		"diff-index":     {"--name-only", "HEAD", "--"},
-		gitStatusCommand: {"-sb"},
-		"ls-files":       {"--other", "--exclude-standard"},
-		gitBranchCommand: {"--show-current"},
-	} {
+	for sub, cmd := range cmds {
 		r := make(chan gitStatus)
 		go gitCommandAsync(r, sub, directory, cmd...)
 		results = append(results, r)
