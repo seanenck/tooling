@@ -1,4 +1,4 @@
-// Package main provides neovim plugin help
+// Package main provides editor plugin help
 package main
 
 import (
@@ -11,12 +11,12 @@ import (
 )
 
 type (
-	// Plugin is a specific neovim plugin remote
+	// Plugin is a specific editor plugin remote
 	Plugin string
 )
 
 func (p Plugin) write(text string) {
-	fmt.Printf("%s: %s\n", p, text)
+	fmt.Printf("  -> %s: %s\n", p, text)
 }
 
 func (p Plugin) fail() {
@@ -51,7 +51,7 @@ func updatePlugin(dest, plugin string) {
 	base.write("done")
 }
 
-// EditorPluginsApp handles getting/updating neovim plugins
+// EditorPluginsApp handles getting/updating editor plugins
 func EditorPluginsApp() error {
 	home := os.Getenv("HOME")
 	cfg := []struct {
@@ -67,6 +67,7 @@ func EditorPluginsApp() error {
 		if !c.Enabled {
 			continue
 		}
+		fmt.Printf("updating: %s\n", c.Path)
 		dest := filepath.Join(home, c.Path)
 		var wg sync.WaitGroup
 		for _, plugin := range c.Plugins {
