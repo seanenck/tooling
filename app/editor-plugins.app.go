@@ -51,27 +51,33 @@ func updatePlugin(dest, plugin string) {
 	base.write("done")
 }
 
-// NeovimPluginsApp handles getting/updating neovim plugins
-func NeovimPluginsApp() error {
+// EditorPluginsApp handles getting/updating neovim plugins
+func EditorPluginsApp() error {
 	home := os.Getenv("HOME")
-	cfg := struct {
+	cfg := []struct {
 		Path    string
+		Enabled bool
 		Plugins []string
 	}{}
 	if err := ReadConfig(&cfg); err != nil {
 		return err
 	}
 
-	dest := filepath.Join(home, cfg.Path)
-	var wg sync.WaitGroup
-	for _, plugin := range cfg.Plugins {
-		wg.Add(1)
-		go func(to, remote string) {
-			defer wg.Done()
-			updatePlugin(to, remote)
-		}(dest, plugin)
-	}
+	for _, c := range cfg {
+		if !c.Enabled {
+			continue
+		}
+		dest := filepath.Join(home, c.Path)
+		var wg sync.WaitGroup
+		for _, plugin := range c.Plugins {
+			wg.Add(1)
+			go func(to, remote string) {
+				defer wg.Done()
+				updatePlugin(to, remote)
+			}(dest, plugin)
+		}
 
-	wg.Wait()
+		wg.Wait()
+	}
 	return nil
 }
