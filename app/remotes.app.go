@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"sort"
 	"strings"
 )
 
@@ -182,6 +183,7 @@ func RemotesApp() error {
 		}
 	}
 
+	sort.Strings(now)
 	if len(had) > 0 {
 		differ := func(prefix rune, left, right []string) bool {
 			status := false
