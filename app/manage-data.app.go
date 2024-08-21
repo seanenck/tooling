@@ -4,6 +4,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -26,6 +27,7 @@ func ManageDataApp() error {
 	home := os.Getenv("HOME")
 	cfg := struct {
 		Library string
+		URL     string
 	}{}
 	if err := ReadConfig(&cfg); err != nil {
 		return err
@@ -68,6 +70,11 @@ complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
 	if !slices.Contains(opt, cmd) {
 		return fmt.Errorf("%s is an invalid library command", cmd)
 	}
+	res, err := http.DefaultClient.Get(cfg.URL)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
 	arguments := []string{filepath.Join(lib, cmd)}
 	arguments = append(arguments, sub...)
 	c := exec.Command("caffeinate", arguments...)
