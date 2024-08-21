@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"text/template"
 )
@@ -34,6 +35,7 @@ func main() {
 )
 
 var (
+	disabled   = []string{"editor-plugins", "update-system"}
 	destDir    = filepath.Join(".local", "bin")
 	buildFlags = []string{
 		"-trimpath",
@@ -120,6 +122,9 @@ func build() error {
 			length := len(cut)
 			if length > maxName {
 				maxName = length
+			}
+			if slices.Contains(disabled, cut) {
+				continue
 			}
 			targets = append(targets, cut)
 		} else {
