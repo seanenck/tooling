@@ -36,7 +36,7 @@ func main() {
 )
 
 var (
-	disabled   = []string{"editor-plugins", "update-system"}
+	disabled   = []string{}
 	destDir    = filepath.Join(".local", "bin")
 	buildFlags = []string{
 		"-trimpath",
