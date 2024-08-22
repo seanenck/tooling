@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -43,6 +44,14 @@ var (
 		"-mod=readonly",
 		"-modcacherw",
 		"-buildvcs=false",
+	}
+)
+
+type (
+	buildResult struct {
+		name  string
+		err   error
+		built bool
 	}
 )
 
@@ -135,98 +144,125 @@ func build() error {
 	if err != nil {
 		return err
 	}
-	formatter := fmt.Sprintf("%%s%%%ds -> ", maxName+5)
-	for idx, target := range targets {
-		prefix := "\n"
-		if idx == 0 {
-			prefix = ""
-		}
-		fmt.Printf(formatter, prefix, target)
-		src := []string{filepath.Join(appDir, fmt.Sprintf("%s%s", target, appFile))}
-		src = append(src, source...)
-		obj := filepath.Join(buildDir, target)
-		stat, err := os.Stat(obj)
-		building := true
-		if err == nil {
-			building = false
-			mod := stat.ModTime()
-			checks := []string{"go.mod", "build.go"}
-			checks = append(checks, src...)
-			for _, f := range checks {
-				info, err := os.Stat(f)
-				if err != nil {
-					return err
-				}
-				if info.ModTime().After(mod) {
-					building = true
-					break
-				}
-			}
-		}
-		if !building {
-			fmt.Printf("up-to-date")
-			continue
-		}
-
-		isUpper := true
-		properName := ""
-		for _, r := range target {
-			if (r >= 'a' && r <= 'z') || r == '-' {
-				if r == '-' && !isUpper {
-					isUpper = true
-					continue
-				}
-				use := fmt.Sprintf("%c", r)
-				if isUpper {
-					use = strings.ToUpper(use)
-					isUpper = false
-				}
-				properName = fmt.Sprintf("%s%s", properName, use)
-			}
-		}
-		if properName == "" {
-			return fmt.Errorf("unable to parse target proper name: %s", target)
-		}
-		properName = fmt.Sprintf("%sApp", properName)
-		app := struct {
-			App string
-		}{properName}
-		var buf bytes.Buffer
-		if err := tmpl.Execute(&buf, app); err != nil {
-			return err
-		}
-		hasher := sha256.New()
-		if _, err := hasher.Write([]byte(properName)); err != nil {
-			return err
-		}
-		hash := hasher.Sum(nil)
-		tmp := filepath.Join(buildDir, "src", fmt.Sprintf("%x", hash)[0:7])
-		os.RemoveAll(tmp)
-		if err := mkDirP(tmp); err != nil {
-			return err
-		}
-		mainFile := filepath.Join(tmp, "main.go")
-		if err := os.WriteFile(mainFile, buf.Bytes(), 0o644); err != nil {
-			return err
-		}
-		inputs := []string{mainFile}
-		for _, s := range src {
-			name := filepath.Base(s)
-			to := filepath.Join(tmp, name)
-			if err := runCommand("cp", s, to); err != nil {
-				return err
-			}
-			inputs = append(inputs, to)
-		}
-		args := []string{"build"}
-		args = append(args, buildFlags...)
-		args = append(args, "-o", obj)
-		args = append(args, inputs...)
-		if err := runCommand("go", args...); err != nil {
-			return err
-		}
-		fmt.Printf("built")
+	var res []chan buildResult
+	for _, target := range targets {
+		r := make(chan buildResult)
+		go parallelBuild(target, source, tmpl, r)
+		res = append(res, r)
 	}
-	fmt.Println("\n\nbuild completed")
+	var errored []error
+	for _, r := range res {
+		result := <-r
+		status := ""
+		if result.err != nil {
+			status = "failed"
+			errored = append(errored, result.err)
+		} else {
+			if result.built {
+				status = "built"
+			} else {
+				status = "up-to-date"
+			}
+		}
+		fmt.Printf("[%s] %s\n", status, result.name)
+	}
+	if len(errored) > 0 {
+		return errors.Join(errored...)
+	}
+	fmt.Println("\nbuild completed")
 	return nil
+}
+
+func parallelBuild(target string, source []string, tmpl *template.Template, res chan buildResult) {
+	result := buildResult{name: target}
+	built, err := buildTarget(target, source, tmpl)
+	if err == nil {
+		result.built = built
+	} else {
+		result.err = err
+	}
+	res <- result
+}
+
+func buildTarget(target string, source []string, tmpl *template.Template) (bool, error) {
+	src := []string{filepath.Join(appDir, fmt.Sprintf("%s%s", target, appFile))}
+	src = append(src, source...)
+	obj := filepath.Join(buildDir, target)
+	stat, err := os.Stat(obj)
+	building := true
+	if err == nil {
+		building = false
+		mod := stat.ModTime()
+		checks := []string{"go.mod", "build.go"}
+		checks = append(checks, src...)
+		for _, f := range checks {
+			info, err := os.Stat(f)
+			if err != nil {
+				return false, err
+			}
+			if info.ModTime().After(mod) {
+				building = true
+				break
+			}
+		}
+	}
+	if !building {
+		return false, nil
+	}
+
+	isUpper := true
+	properName := ""
+	for _, r := range target {
+		if (r >= 'a' && r <= 'z') || r == '-' {
+			if r == '-' && !isUpper {
+				isUpper = true
+				continue
+			}
+			use := fmt.Sprintf("%c", r)
+			if isUpper {
+				use = strings.ToUpper(use)
+				isUpper = false
+			}
+			properName = fmt.Sprintf("%s%s", properName, use)
+		}
+	}
+	if properName == "" {
+		return false, fmt.Errorf("unable to parse target proper name: %s", target)
+	}
+	properName = fmt.Sprintf("%sApp", properName)
+	app := struct {
+		App string
+	}{properName}
+	var buf bytes.Buffer
+	if err := tmpl.Execute(&buf, app); err != nil {
+		return false, err
+	}
+	hasher := sha256.New()
+	if _, err := hasher.Write([]byte(properName)); err != nil {
+		return false, err
+	}
+	hash := hasher.Sum(nil)
+	tmp := filepath.Join(buildDir, "src", fmt.Sprintf("%x", hash)[0:7])
+	os.RemoveAll(tmp)
+	if err := mkDirP(tmp); err != nil {
+		return false, err
+	}
+	mainFile := filepath.Join(tmp, "main.go")
+	if err := os.WriteFile(mainFile, buf.Bytes(), 0o644); err != nil {
+		return false, err
+	}
+	inputs := []string{mainFile}
+	for _, s := range src {
+		name := filepath.Base(s)
+		to := filepath.Join(tmp, name)
+		if err := runCommand("cp", s, to); err != nil {
+			return false, err
+		}
+		inputs = append(inputs, to)
+	}
+	args := []string{"build"}
+	args = append(args, buildFlags...)
+	args = append(args, "-o", obj)
+	args = append(args, inputs...)
+	return true, runCommand("go", args...)
 }
