@@ -27,6 +27,9 @@ import (
 )
 
 func main() {
+{{- range $key, $value := .Variables }}
+	{{ $key }} = "{{ $value }}"
+{{- end }}
 	if err := {{ .App }}(); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
@@ -36,7 +39,8 @@ func main() {
 )
 
 var (
-	disabled   = []string{}
+	configExt  = ".json"
+	configDir  = filepath.Join(os.Getenv("HOME"), ".config", "etc")
 	destDir    = filepath.Join(".local", "bin")
 	buildFlags = []string{
 		"-trimpath",
@@ -117,6 +121,17 @@ func build() error {
 		}
 		return nil
 	}
+	cfgs, err := os.ReadDir(configDir)
+	if err != nil {
+		return err
+	}
+	var configs []string
+	for _, f := range cfgs {
+		configs = append(configs, strings.TrimSuffix(f.Name(), configExt))
+	}
+	if len(configs) == 0 {
+		return errors.New("no configs found for build targets")
+	}
 	files, err := os.ReadDir(appDir)
 	if err != nil {
 		return err
@@ -132,7 +147,7 @@ func build() error {
 			if length > maxName {
 				maxName = length
 			}
-			if slices.Contains(disabled, cut) {
+			if !slices.Contains(configs, cut) {
 				continue
 			}
 			targets = append(targets, cut)
@@ -231,8 +246,9 @@ func buildTarget(target string, source []string, tmpl *template.Template) (bool,
 	}
 	properName = fmt.Sprintf("%sApp", properName)
 	app := struct {
-		App string
-	}{properName}
+		App       string
+		Variables map[string]string
+	}{properName, map[string]string{"ConfigPath": configDir, "ConfigExtension": configExt}}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, app); err != nil {
 		return false, err
