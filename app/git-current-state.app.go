@@ -46,7 +46,7 @@ func gitCommand(sub string, p gitPath, filter []string, args ...string) gitStatu
 }
 
 // GitCurrentStateApp handles reporting state of git status for current directory
-func GitCurrentStateApp() error {
+func GitCurrentStateApp(_ Args) error {
 	quick := flag.Bool("quick", false, "quickly exit on first issue")
 	branches := flag.String("default-branches", "main,master", "default branch names")
 	flag.Parse()

@@ -28,7 +28,7 @@ func uncommit(stdout chan string, dir string) {
 }
 
 // GitUncommittedApp handles a summary of repositories across a set of directories
-func GitUncommittedApp() error {
+func GitUncommittedApp(a Args) error {
 	mode := flag.String("mode", "", "operating mode")
 	flag.Parse()
 	op := *mode
@@ -49,7 +49,7 @@ func GitUncommittedApp() error {
 	cfg := struct {
 		Directories []string
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 

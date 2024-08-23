@@ -14,14 +14,14 @@ import (
 )
 
 // TranscodeMediaApp handles transcoding of media to other formats in mass
-func TranscodeMediaApp() error {
+func TranscodeMediaApp(a Args) error {
 	cfg := struct {
 		Transcode []struct {
 			Extensions []string
 			Command    []string
 		}
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 	files, err := os.ReadDir(".")

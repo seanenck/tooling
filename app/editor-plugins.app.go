@@ -52,14 +52,14 @@ func updatePlugin(dest, plugin string) {
 }
 
 // EditorPluginsApp handles getting/updating editor plugins
-func EditorPluginsApp() error {
+func EditorPluginsApp(a Args) error {
 	home := os.Getenv("HOME")
 	cfg := []struct {
 		Path    string
 		Enabled bool
 		Plugins []string
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 

@@ -14,7 +14,7 @@ import (
 )
 
 // ManageDataApp handles management of data (wrappers)
-func ManageDataApp() error {
+func ManageDataApp(a Args) error {
 	args := os.Args
 	if len(args) < 2 {
 		return errors.New("invalid command")
@@ -29,7 +29,7 @@ func ManageDataApp() error {
 		Library string
 		URL     string
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 	lib := filepath.Join(home, cfg.Library)

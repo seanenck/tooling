@@ -141,13 +141,13 @@ func uploadHandler(store string, extensions []string, r *http.Request) error {
 }
 
 // FileUploadApp handles file upload helper
-func FileUploadApp() error {
+func FileUploadApp(a Args) error {
 	cfg := struct {
 		Bind       string
 		Store      string
 		Extensions []string
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 	store := filepath.Join(os.Getenv("HOME"), cfg.Store)

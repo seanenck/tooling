@@ -31,7 +31,7 @@ func parseModeOpts[T any](mode, key string, modes map[string]map[string]interfac
 }
 
 // RemotesApp helps sync release tags from remotes for update tracking
-func RemotesApp() error {
+func RemotesApp(a Args) error {
 	const (
 		gitMode  = "Git"
 		brewMode = "Brew"
@@ -42,7 +42,7 @@ func RemotesApp() error {
 		State   string
 		Modes   map[string]map[string]interface{}
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 	var filters []*regexp.Regexp

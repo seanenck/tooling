@@ -11,7 +11,7 @@ import (
 )
 
 // GolintApp handles golint wrapping of tools
-func GolintApp() error {
+func GolintApp(a Args) error {
 	if !PathExists("go.mod") {
 		return errors.New("cowardly refusing to run outside go.mod root")
 	}
@@ -25,7 +25,7 @@ func GolintApp() error {
 	cfg := struct {
 		Tools []Tool
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 	searched := false

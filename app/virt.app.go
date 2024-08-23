@@ -13,7 +13,7 @@ import (
 )
 
 // VirtApp handles wrapping vfu with virt helpers
-func VirtApp() error {
+func VirtApp(a Args) error {
 	const (
 		jsonFile      = ".json"
 		screenName    = "vfu-virt-%s"
@@ -35,7 +35,7 @@ func VirtApp() error {
 	cfg := struct {
 		Directory string
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 	dir := filepath.Join(os.Getenv("HOME"), cfg.Directory)

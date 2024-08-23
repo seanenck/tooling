@@ -27,10 +27,11 @@ import (
 )
 
 func main() {
-{{- range $key, $value := .Variables }}
-	{{ $key }} = "{{ $value }}"
-{{- end }}
-	if err := {{ .App }}(); err != nil {
+	args := Args{}
+    {{- range $key, $value := .Variables }}
+	args.{{ $key }} = "{{ $value }}"
+    {{- end }}
+	if err := {{ .App }}(args); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
@@ -248,7 +249,7 @@ func buildTarget(target string, source []string, tmpl *template.Template) (bool,
 	app := struct {
 		App       string
 		Variables map[string]string
-	}{properName, map[string]string{"ConfigFile": filepath.Join(configDir, fmt.Sprintf("%s%s", target, configExt))}}
+	}{properName, map[string]string{"Config": filepath.Join(configDir, fmt.Sprintf("%s%s", target, configExt))}}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, app); err != nil {
 		return false, err

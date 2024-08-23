@@ -11,7 +11,7 @@ import (
 )
 
 // UpdateSystemApp handles system update calls
-func UpdateSystemApp() error {
+func UpdateSystemApp(a Args) error {
 	cfg := struct {
 		State struct {
 			Path   string
@@ -22,7 +22,7 @@ func UpdateSystemApp() error {
 			Command []string
 		}
 	}{}
-	if err := ReadConfig(&cfg); err != nil {
+	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 	args := os.Args
