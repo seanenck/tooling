@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	appDir   = "app"
+	srcDir   = "src"
 	appFile  = ".app.go"
 	buildDir = "target"
 	mainText = `// Package main handles {{ .App }}
@@ -133,7 +133,7 @@ func build() error {
 	if len(configs) == 0 {
 		return errors.New("no configs found for build targets")
 	}
-	files, err := os.ReadDir(appDir)
+	files, err := os.ReadDir(srcDir)
 	if err != nil {
 		return err
 	}
@@ -153,7 +153,7 @@ func build() error {
 			}
 			targets = append(targets, cut)
 		} else {
-			source = append(source, filepath.Join(appDir, name))
+			source = append(source, filepath.Join(srcDir, name))
 		}
 	}
 	tmpl, err := template.New("t").Parse(mainText)
@@ -201,7 +201,7 @@ func parallelBuild(target string, source []string, tmpl *template.Template, res 
 }
 
 func buildTarget(target string, source []string, tmpl *template.Template) (bool, error) {
-	src := []string{filepath.Join(appDir, fmt.Sprintf("%s%s", target, appFile))}
+	src := []string{filepath.Join(srcDir, fmt.Sprintf("%s%s", target, appFile))}
 	src = append(src, source...)
 	obj := filepath.Join(buildDir, target)
 	stat, err := os.Stat(obj)
