@@ -248,7 +248,7 @@ func buildTarget(target string, source []string, tmpl *template.Template) (bool,
 	app := struct {
 		App       string
 		Variables map[string]string
-	}{properName, map[string]string{"ConfigPath": configDir, "ConfigExtension": configExt}}
+	}{properName, map[string]string{"ConfigFile": filepath.Join(configDir, fmt.Sprintf("%s%s", target, configExt))}}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, app); err != nil {
 		return false, err
