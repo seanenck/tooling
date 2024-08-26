@@ -6,21 +6,15 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
+	"slices"
 	"time"
 )
 
 // UpdateSystemApp handles system update calls
 func UpdateSystemApp(a Args) error {
 	cfg := struct {
-		State struct {
-			Path   string
-			Format string
-		}
-		Updates []struct {
-			Detect  string
-			Command []string
-		}
+		Path   string
+		Format string
 	}{}
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
@@ -40,35 +34,33 @@ func UpdateSystemApp(a Args) error {
 	default:
 		return fmt.Errorf("unknown arguments given: %v", args)
 	}
-	state := filepath.Join(os.Getenv("HOME"), cfg.State.Path)
+	state := filepath.Join(os.Getenv("HOME"), cfg.Path)
 	if !force {
 		if PathExists(state) {
 			i, err := os.Stat(state)
 			if err != nil {
 				return err
 			}
-			now := time.Now().Format(cfg.State.Format)
-			if i.ModTime().Format(cfg.State.Format) == now {
+			now := time.Now().Format(cfg.Format)
+			if i.ModTime().Format(cfg.Format) == now {
 				fmt.Println("up-to-date")
 				return nil
 			}
 		}
 	}
-	for _, cmd := range cfg.Updates {
-		out, err := exec.Command("command", "-v", cmd.Detect).Output()
-		if err == nil && strings.TrimSpace(string(out)) != "" {
-			fmt.Printf("updating: %v\n", cmd.Command)
-			command := cmd.Command[0]
-			var args []string
-			if len(cmd.Command) > 1 {
-				args = cmd.Command[1:]
-			}
-			c := exec.Command(command, args...)
-			c.Stdout = os.Stdout
-			c.Stderr = os.Stderr
-			if err := c.Run(); err != nil {
-				return err
-			}
+	var updates []string
+	for k, v := range a.Flags {
+		if slices.Contains(v, a.Name) && slices.Contains(v, a.EnabledKey) {
+			updates = append(updates, k)
+		}
+	}
+	for _, cmd := range updates {
+		fmt.Printf("updating: %v\n", cmd)
+		c := exec.Command(cmd)
+		c.Stdout = os.Stdout
+		c.Stderr = os.Stderr
+		if err := c.Run(); err != nil {
+			return err
 		}
 	}
 	return os.WriteFile(state, []byte{}, 0o644)

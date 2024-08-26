@@ -3,7 +3,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -33,8 +32,7 @@ func parseModeOpts[T any](mode, key string, modes map[string]map[string]interfac
 // RemotesApp helps sync release tags from remotes for update tracking
 func RemotesApp(a Args) error {
 	const (
-		gitMode  = "Git"
-		brewMode = "Brew"
+		gitMode = "Git"
 	)
 	home := os.Getenv("HOME")
 	cfg := struct {
@@ -62,12 +60,6 @@ func RemotesApp(a Args) error {
 		}
 		filters = append(filters, r)
 	}
-	brewRawField, err := parseModeOpts[string](brewMode, "Field", modes)
-	if err != nil {
-		return err
-	}
-	brewField := strings.Split(*brewRawField, ".")
-	brewLength := len(brewField) - 1
 	state := filepath.Join(home, cfg.State)
 	var had []string
 	if PathExists(state) {
@@ -129,33 +121,6 @@ func RemotesApp(a Args) error {
 			return err
 		}
 		switch typed {
-		case brewMode:
-			var data []map[string]interface{}
-			if err := json.Unmarshal(out, &data); err != nil {
-				return err
-			}
-			for _, d := range data {
-				use := d
-				for idx, p := range brewField {
-					vals, ok := use[p]
-					if !ok {
-						return fmt.Errorf("%s is missing required field: %v", source, brewField)
-					}
-					if idx == brewLength {
-						s, ok := vals.(string)
-						if !ok {
-							return fmt.Errorf("%s field is not string: %v", source, vals)
-						}
-						versioner(source, s)
-					} else {
-						next, ok := vals.(map[string]interface{})
-						if !ok {
-							return fmt.Errorf("subsection is invalid: %s (%v)", source, brewField)
-						}
-						use = next
-					}
-				}
-			}
 		case gitMode:
 			{
 				name := filepath.Base(source)

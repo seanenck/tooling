@@ -4,6 +4,7 @@ package main
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -15,10 +16,11 @@ import (
 )
 
 const (
-	srcDir   = "src"
-	appFile  = ".app.go"
-	buildDir = "target"
-	mainText = `// Package main handles {{ .App }}
+	enabledKey = "enabled"
+	srcDir     = "src"
+	appFile    = ".app.go"
+	buildDir   = "target"
+	mainText   = `// Package main handles {{ .App }}
 package main
 
 import (
@@ -29,7 +31,7 @@ import (
 func main() {
 	args := Args{}
     {{- range $key, $value := .Variables }}
-	args.{{ $key }} = "{{ $value }}"
+	args.{{ $key }} = {{ if not $value.Raw }}"{{ end }}{{ $value.Value }}{{ if not $value.Raw }}"{{ end }}
     {{- end }}
 	if err := {{ .App }}(args); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
@@ -40,8 +42,7 @@ func main() {
 )
 
 var (
-	configExt  = ".json"
-	configDir  = filepath.Join(os.Getenv("HOME"), ".config", "etc")
+	configFile = filepath.Join(os.Getenv("HOME"), ".config", "tooling.json")
 	destDir    = filepath.Join(".local", "bin")
 	buildFlags = []string{
 		"-trimpath",
@@ -62,7 +63,7 @@ type (
 
 func main() {
 	if err := build(); err != nil {
-		fmt.Fprintf(os.Stderr, "\n===\nbuild failed: %v", err)
+		fmt.Fprintf(os.Stderr, "\n===\nbuild failed: %v\n", err)
 		os.Exit(1)
 	}
 }
@@ -122,13 +123,43 @@ func build() error {
 		}
 		return nil
 	}
-	cfgs, err := os.ReadDir(configDir)
+	b, err := os.ReadFile(configFile)
 	if err != nil {
 		return err
 	}
+
 	var configs []string
-	for _, f := range cfgs {
-		configs = append(configs, strings.TrimSuffix(f.Name(), configExt))
+	cfg := make(map[string]interface{})
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		return err
+	}
+	var targetFlags []string
+	targetFlags = append(targetFlags, "make(map[string][]string)")
+	for k, v := range cfg {
+		def, ok := v.(map[string]interface{})
+		if !ok {
+			return errors.New("invalid settings json, not a map")
+		}
+		set, ok := def["Flags"]
+		if !ok {
+			return errors.New("invalid settings json, no flags")
+		}
+		flags, ok := set.([]interface{})
+		if !ok {
+			return errors.New("invalid settings json, flags not array")
+		}
+		var setFlags []string
+		for _, f := range flags {
+			s, ok := f.(string)
+			if !ok {
+				return fmt.Errorf("%v is not string", f)
+			}
+			if s == enabledKey {
+				configs = append(configs, k)
+			}
+			setFlags = append(setFlags, fmt.Sprintf("\"%s\"", s))
+		}
+		targetFlags = append(targetFlags, fmt.Sprintf("\targs.Flags[\"%s\"] = []string{%s}", k, strings.Join(setFlags, ", ")))
 	}
 	if len(configs) == 0 {
 		return errors.New("no configs found for build targets")
@@ -160,10 +191,11 @@ func build() error {
 	if err != nil {
 		return err
 	}
+	flags := strings.Join(targetFlags, "\n")
 	var res []chan buildResult
 	for _, target := range targets {
 		r := make(chan buildResult)
-		go parallelBuild(target, source, tmpl, r)
+		go parallelBuild(target, flags, source, tmpl, r)
 		res = append(res, r)
 	}
 	var errored []error
@@ -189,9 +221,9 @@ func build() error {
 	return nil
 }
 
-func parallelBuild(target string, source []string, tmpl *template.Template, res chan buildResult) {
+func parallelBuild(target, flags string, source []string, tmpl *template.Template, res chan buildResult) {
 	result := buildResult{name: target}
-	built, err := buildTarget(target, source, tmpl)
+	built, err := buildTarget(target, flags, source, tmpl)
 	if err == nil {
 		result.built = built
 	} else {
@@ -200,7 +232,7 @@ func parallelBuild(target string, source []string, tmpl *template.Template, res 
 	res <- result
 }
 
-func buildTarget(target string, source []string, tmpl *template.Template) (bool, error) {
+func buildTarget(target, flags string, source []string, tmpl *template.Template) (bool, error) {
 	src := []string{filepath.Join(srcDir, fmt.Sprintf("%s%s", target, appFile))}
 	src = append(src, source...)
 	obj := filepath.Join(buildDir, target)
@@ -246,10 +278,19 @@ func buildTarget(target string, source []string, tmpl *template.Template) (bool,
 		return false, fmt.Errorf("unable to parse target proper name: %s", target)
 	}
 	properName = fmt.Sprintf("%sApp", properName)
+	type variable struct {
+		Value string
+		Raw   bool
+	}
 	app := struct {
 		App       string
-		Variables map[string]string
-	}{properName, map[string]string{"Config": filepath.Join(configDir, fmt.Sprintf("%s%s", target, configExt))}}
+		Variables map[string]variable
+	}{properName, map[string]variable{
+		"Name":       {Value: target},
+		"ConfigFile": {Value: configFile},
+		"Flags":      {Value: flags, Raw: true},
+		"EnabledKey": {Value: enabledKey},
+	}}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, app); err != nil {
 		return false, err
