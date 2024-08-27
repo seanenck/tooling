@@ -70,7 +70,10 @@ func RemotesApp(a Args) error {
 	}
 	state := filepath.Join(home, cfg.State)
 	var had []string
-	if PathExists(state) {
+	isInit := !PathExists(state)
+	if isInit {
+		fmt.Println("initializing...")
+	} else {
 		last, err := os.ReadFile(state)
 		if err != nil {
 			return err
@@ -82,8 +85,6 @@ func RemotesApp(a Args) error {
 			}
 			had = append(had, t)
 		}
-	} else {
-		fmt.Println("initializing...")
 	}
 	cmds := make(map[string][]string)
 	for k, v := range modes {
@@ -217,7 +218,7 @@ func RemotesApp(a Args) error {
 	}
 
 	sort.Strings(now)
-	if len(had) > 0 {
+	if len(had) > 0 || isInit {
 		differ := func(prefix rune, left, right []string) bool {
 			status := false
 			for _, item := range left {
@@ -232,7 +233,7 @@ func RemotesApp(a Args) error {
 
 		older := differ('-', had, now)
 		newer := differ('+', now, had)
-		if older || newer {
+		if older || newer || isInit {
 			fmt.Printf("updates applied? (y/N) ")
 			reader := bufio.NewReader(os.Stdin)
 			line, err := reader.ReadString('\n')
