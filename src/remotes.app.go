@@ -33,6 +33,7 @@ func parseModeOpts[T any](mode, key string, modes map[string]map[string]interfac
 func RemotesApp(a Args) error {
 	const (
 		gitMode = "Git"
+		webMode = "HTTP"
 	)
 	home := os.Getenv("HOME")
 	cfg := struct {
@@ -43,8 +44,15 @@ func RemotesApp(a Args) error {
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
-	var filters []*regexp.Regexp
+
 	modes := cfg.Modes
+	rawWebModes, err := parseModeOpts[map[string]interface{}](webMode, "Filters", modes)
+	if err != nil {
+		return err
+	}
+	webModes := *rawWebModes
+
+	var filters []*regexp.Regexp
 	gitFilters, err := parseModeOpts[[]interface{}](gitMode, "Filter", modes)
 	if err != nil {
 		return err
@@ -104,7 +112,17 @@ func RemotesApp(a Args) error {
 	versioner := func(n, v string) {
 		now = append(now, fmt.Sprintf("%s %s", n, v))
 	}
-	for source, typed := range cfg.Sources {
+	for source, raw := range cfg.Sources {
+		typed := raw
+		subType := ""
+		if strings.Contains(raw, "|") {
+			parts := strings.Split(raw, "|")
+			if len(parts) != 2 {
+				return fmt.Errorf("invalid sub type: %v", parts)
+			}
+			typed = parts[0]
+			subType = parts[1]
+		}
 		fmt.Printf("getting: %s\n", source)
 		cmd, ok := cmds[typed]
 		if !ok {
@@ -121,6 +139,56 @@ func RemotesApp(a Args) error {
 			return err
 		}
 		switch typed {
+		case webMode:
+			s, ok := webModes[subType]
+			if !ok {
+				return fmt.Errorf("unknown web mode: %s", subType)
+			}
+			def, ok := s.(map[string]interface{})
+			if !ok {
+				return fmt.Errorf("invalid definition for web mode: %s %v", subType, def)
+			}
+			var start, end string
+			for k, v := range def {
+				r, ok := v.(string)
+				if !ok {
+					continue
+				}
+				switch k {
+				case "Start":
+					start = r
+				case "End":
+					end = r
+				default:
+					return fmt.Errorf("unexpected web selector key: %s", k)
+				}
+			}
+
+			if start == "" || end == "" {
+				return fmt.Errorf("invalid web selector: %v", def)
+			}
+			startRegex, err := regexp.Compile(start)
+			if err != nil {
+				return err
+			}
+			endRegex, err := regexp.Compile(end)
+			if err != nil {
+				return err
+			}
+
+			for _, line := range strings.Split(string(out), "\n") {
+				from := startRegex.FindStringIndex(line)
+				if len(from) == 0 {
+					continue
+				}
+				selected := line[from[0]:]
+				to := endRegex.FindStringIndex(selected)
+				if len(to) == 0 {
+					continue
+				}
+				selected = selected[0:to[1]]
+				versioner(subType, selected)
+			}
 		case gitMode:
 			{
 				name := filepath.Base(source)

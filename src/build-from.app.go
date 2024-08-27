@@ -34,6 +34,7 @@ func doBuildStep(data any, commands []string) error {
 	return c.Run()
 }
 
+// BuildFromApp handles building from a source package of an app
 func BuildFromApp(a Args) error {
 	type build struct {
 		Configure []string
