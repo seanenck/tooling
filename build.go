@@ -44,7 +44,7 @@ func main() {
 
 var (
 	configFiles = filepath.Join(os.Getenv("HOME"), ".config", "tooling")
-	destDir     = filepath.Join("/opt", "fs", "root", "bin")
+	destDir     = filepath.Join(os.Getenv("HOME"), ".local", "bin")
 	buildFlags  = []string{
 		"-trimpath",
 		"-buildmode=pie",
