@@ -80,12 +80,16 @@ complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
 	var arguments []string
 	script := filepath.Join(lib, cmd)
 	if cfg.Remote {
-		const sshFlag = "--ssh"
+		const (
+			sshFlag = "--ssh"
+			sshEnv  = "IS_SSH_TASKS"
+		)
 		exe = script
 		arguments = sub
-		if !slices.Contains(sub, sshFlag) {
-			return errors.New("unable to work in remote mode without ssh flag")
+		if !slices.Contains(sub, sshFlag) && os.Getenv(sshEnv) == "" {
+			return errors.New("unable to work in remote mode without ssh flag/env")
 		}
+		os.Setenv(sshEnv, "true")
 		arguments = func() []string {
 			var r []string
 			for _, f := range sub {
