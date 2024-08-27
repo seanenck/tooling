@@ -16,6 +16,7 @@ import (
 )
 
 const (
+	configExt  = ".json"
 	enabledKey = "enabled"
 	srcDir     = "src"
 	appFile    = ".app.go"
@@ -42,9 +43,9 @@ func main() {
 )
 
 var (
-	configFile = filepath.Join(os.Getenv("HOME"), ".config", "tooling.json")
-	destDir    = filepath.Join(".local", "bin")
-	buildFlags = []string{
+	configFiles = filepath.Join(os.Getenv("HOME"), ".config", "tooling")
+	destDir     = filepath.Join("/opt", "fs", "root", "bin")
+	buildFlags  = []string{
 		"-trimpath",
 		"-buildmode=pie",
 		"-mod=readonly",
@@ -105,7 +106,6 @@ func build() error {
 		return os.RemoveAll(buildDir)
 	}
 	if isInstall {
-		dest := filepath.Join(os.Getenv("HOME"), destDir)
 		files, err := os.ReadDir(buildDir)
 		if err != nil {
 			return err
@@ -115,7 +115,7 @@ func build() error {
 				continue
 			}
 			name := f.Name()
-			to := filepath.Join(dest, name)
+			to := filepath.Join(destDir, name)
 			fmt.Printf("install -> %s (destination: %s)\n", name, to)
 			if err := runCommand("install", "-m755", filepath.Join(buildDir, name), to); err != nil {
 				return err
@@ -123,43 +123,48 @@ func build() error {
 		}
 		return nil
 	}
-	b, err := os.ReadFile(configFile)
+	var configs []string
+	var targetFlags []string
+	targetFlags = append(targetFlags, "make(map[string][]string)")
+	dir, err := os.ReadDir(configFiles)
 	if err != nil {
 		return err
 	}
-
-	var configs []string
-	cfg := make(map[string]interface{})
-	if err := json.Unmarshal(b, &cfg); err != nil {
-		return err
-	}
-	var targetFlags []string
-	targetFlags = append(targetFlags, "make(map[string][]string)")
-	for k, v := range cfg {
-		def, ok := v.(map[string]interface{})
+	for _, d := range dir {
+		name := d.Name()
+		target, ok := strings.CutSuffix(name, configExt)
 		if !ok {
-			return errors.New("invalid settings json, not a map")
+			continue
 		}
-		set, ok := def["Flags"]
+		b, err := os.ReadFile(filepath.Join(configFiles, name))
+		if err != nil {
+			return err
+		}
+
+		cfg := make(map[string]interface{})
+		if err := json.Unmarshal(b, &cfg); err != nil {
+			return err
+		}
+		set, ok := cfg["Flags"]
 		if !ok {
-			return errors.New("invalid settings json, no flags")
+			return fmt.Errorf("invalid settings json, no flags: %s", name)
 		}
 		flags, ok := set.([]interface{})
 		if !ok {
-			return errors.New("invalid settings json, flags not array")
+			return fmt.Errorf("invalid settings json, flags array is invalid: %s", name)
 		}
 		var setFlags []string
 		for _, f := range flags {
 			s, ok := f.(string)
 			if !ok {
-				return fmt.Errorf("%v is not string", f)
+				return fmt.Errorf("%v is not string: %s", f, name)
 			}
 			if s == enabledKey {
-				configs = append(configs, k)
+				configs = append(configs, target)
 			}
 			setFlags = append(setFlags, fmt.Sprintf("\"%s\"", s))
 		}
-		targetFlags = append(targetFlags, fmt.Sprintf("\targs.Flags[\"%s\"] = []string{%s}", k, strings.Join(setFlags, ", ")))
+		targetFlags = append(targetFlags, fmt.Sprintf("\targs.Flags[\"%s\"] = []string{%s}", target, strings.Join(setFlags, ", ")))
 	}
 	if len(configs) == 0 {
 		return errors.New("no configs found for build targets")
@@ -287,7 +292,7 @@ func buildTarget(target, flags string, source []string, tmpl *template.Template)
 		Variables map[string]variable
 	}{properName, map[string]variable{
 		"Name":       {Value: target},
-		"ConfigFile": {Value: configFile},
+		"ConfigFile": {Value: filepath.Join(configFiles, fmt.Sprintf("%s%s", target, configExt))},
 		"Flags":      {Value: flags, Raw: true},
 		"EnabledKey": {Value: enabledKey},
 	}}
