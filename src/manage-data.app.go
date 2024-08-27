@@ -28,6 +28,7 @@ func ManageDataApp(a Args) error {
 	cfg := struct {
 		Library string
 		URL     string
+		Remote  bool
 	}{}
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
@@ -75,9 +76,31 @@ complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
 		return err
 	}
 	defer res.Body.Close()
-	arguments := []string{filepath.Join(lib, cmd)}
-	arguments = append(arguments, sub...)
-	c := exec.Command("caffeinate", arguments...)
+	exe := "caffeinate"
+	var arguments []string
+	script := filepath.Join(lib, cmd)
+	if cfg.Remote {
+		const sshFlag = "--ssh"
+		exe = script
+		arguments = sub
+		if !slices.Contains(sub, sshFlag) {
+			return errors.New("unable to work in remote mode without ssh flag")
+		}
+		arguments = func() []string {
+			var r []string
+			for _, f := range sub {
+				if f == sshFlag {
+					continue
+				}
+				r = append(r, f)
+			}
+			return r
+		}()
+	} else {
+		arguments = append(arguments, script)
+		arguments = append(arguments, sub...)
+	}
+	c := exec.Command(exe, arguments...)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 	return c.Run()
