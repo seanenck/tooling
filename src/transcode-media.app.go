@@ -3,6 +3,7 @@ package main
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -15,11 +16,13 @@ import (
 
 // TranscodeMediaApp handles transcoding of media to other formats in mass
 func TranscodeMediaApp(a Args) error {
+	type Transcoder struct {
+		Enabled    bool
+		Extensions []string
+		Command    []string
+	}
 	cfg := struct {
-		Transcode []struct {
-			Extensions []string
-			Command    []string
-		}
+		Transcode []Transcoder
 	}{}
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
@@ -28,14 +31,22 @@ func TranscodeMediaApp(a Args) error {
 	if err != nil {
 		return err
 	}
+	var transcoders []Transcoder
 	var allExtensions []string
 	for _, transcode := range cfg.Transcode {
+		if !transcode.Enabled {
+			continue
+		}
 		for _, ext := range transcode.Extensions {
 			if slices.Contains(allExtensions, ext) {
 				return fmt.Errorf("%s is already handled", ext)
 			}
 			allExtensions = append(allExtensions, fmt.Sprintf(".%s", ext))
 		}
+		transcoders = append(transcoders, transcode)
+	}
+	if len(transcoders) == 0 {
+		return errors.New("no transcoders found")
 	}
 	for _, f := range files {
 		if f.IsDir() {
@@ -60,7 +71,7 @@ func TranscodeMediaApp(a Args) error {
 		now := time.Now().Format("02.T_150405.")
 		target := fmt.Sprintf("%s%s", now, hashed[0:7])
 		done := false
-		for _, transcode := range cfg.Transcode {
+		for _, transcode := range transcoders {
 			if slices.Contains(transcode.Extensions, ext) {
 				run := ""
 				var args []string
