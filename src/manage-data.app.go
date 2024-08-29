@@ -24,17 +24,25 @@ func ManageDataApp(a Args) error {
 	if len(args) > 1 {
 		sub = args[2:]
 	}
-	home := os.Getenv("HOME")
 	cfg := struct {
 		Library    string
 		URL        string
 		Remote     bool
 		Caffeinate bool
+		LockFile   string
 	}{}
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
+	home := os.Getenv("HOME")
 	lib := filepath.Join(home, cfg.Library)
+	if cfg.LockFile != "" {
+		lockFile := filepath.Join(home, cfg.LockFile)
+		if err := os.WriteFile(lockFile, []byte{}, 0o644); err != nil {
+			return err
+		}
+		defer os.Remove(lockFile)
+	}
 	files, err := os.ReadDir(lib)
 	if err != nil {
 		return err
