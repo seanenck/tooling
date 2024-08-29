@@ -26,9 +26,10 @@ func ManageDataApp(a Args) error {
 	}
 	home := os.Getenv("HOME")
 	cfg := struct {
-		Library string
-		URL     string
-		Remote  bool
+		Library    string
+		URL        string
+		Remote     bool
+		Caffeinate bool
 	}{}
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
@@ -101,7 +102,11 @@ complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
 			return r
 		}()
 	} else {
-		arguments = append(arguments, script)
+		if cfg.Caffeinate {
+			arguments = append(arguments, script)
+		} else {
+			exe = script
+		}
 		arguments = append(arguments, sub...)
 	}
 	c := exec.Command(exe, arguments...)
