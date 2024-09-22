@@ -69,6 +69,14 @@ type (
 		err   error
 		built bool
 	}
+	buildRequest struct {
+		target   string
+		flags    string
+		buildDir string
+		goos     string
+		sources  []string
+		tmpl     *template.Template
+	}
 )
 
 func main() {
@@ -201,7 +209,8 @@ func build() error {
 	var res []chan buildResult
 	for _, target := range targets {
 		r := make(chan buildResult)
-		go parallelBuild(target, flags, buildDir, goos, source, tmpl, r)
+		ask := buildRequest{target, flags, buildDir, goos, source, tmpl}
+		go parallelBuild(ask, r)
 		res = append(res, r)
 	}
 	var errored []error
@@ -227,9 +236,9 @@ func build() error {
 	return os.WriteFile(filepath.Join(buildDir, "Makefile"), []byte(strings.Join(installs, "\n")), 0o644)
 }
 
-func parallelBuild(target, flags, buildDir, goos string, source []string, tmpl *template.Template, res chan buildResult) {
-	result := buildResult{name: target}
-	built, err := buildTarget(target, flags, buildDir, goos, source, tmpl)
+func parallelBuild(ask buildRequest, res chan buildResult) {
+	result := buildResult{name: ask.target}
+	built, err := buildTarget(ask)
 	if err == nil {
 		result.built = built
 	} else {
@@ -238,10 +247,10 @@ func parallelBuild(target, flags, buildDir, goos string, source []string, tmpl *
 	res <- result
 }
 
-func buildTarget(target, flags, buildDir, goos string, source []string, tmpl *template.Template) (bool, error) {
-	src := []string{filepath.Join(srcDir, fmt.Sprintf("%s%s", target, appFile))}
-	src = append(src, source...)
-	obj := filepath.Join(buildDir, target)
+func buildTarget(ask buildRequest) (bool, error) {
+	src := []string{filepath.Join(srcDir, fmt.Sprintf("%s%s", ask.target, appFile))}
+	src = append(src, ask.sources...)
+	obj := filepath.Join(ask.buildDir, ask.target)
 	stat, err := os.Stat(obj)
 	building := true
 	if err == nil {
@@ -266,7 +275,7 @@ func buildTarget(target, flags, buildDir, goos string, source []string, tmpl *te
 
 	isUpper := true
 	properName := ""
-	for _, r := range target {
+	for _, r := range ask.target {
 		if (r >= 'a' && r <= 'z') || r == '-' {
 			if r == '-' && !isUpper {
 				isUpper = true
@@ -281,7 +290,7 @@ func buildTarget(target, flags, buildDir, goos string, source []string, tmpl *te
 		}
 	}
 	if properName == "" {
-		return false, fmt.Errorf("unable to parse target proper name: %s", target)
+		return false, fmt.Errorf("unable to parse target proper name: %s", ask.target)
 	}
 	properName = fmt.Sprintf("%sApp", properName)
 	type variable struct {
@@ -292,14 +301,14 @@ func buildTarget(target, flags, buildDir, goos string, source []string, tmpl *te
 		App       string
 		Variables map[string]variable
 	}{properName, map[string]variable{
-		"Name":       {Value: target},
-		"ConfigFile": {Value: fmt.Sprintf("filepath.Join(os.Getenv(\"HOME\"), \"%s\")", filepath.Join(configOffset, fmt.Sprintf("%s%s", target, configExt))), Raw: true},
-		"Flags":      {Value: flags, Raw: true},
+		"Name":       {Value: ask.target},
+		"ConfigFile": {Value: fmt.Sprintf("filepath.Join(os.Getenv(\"HOME\"), \"%s\")", filepath.Join(configOffset, fmt.Sprintf("%s%s", ask.target, configExt))), Raw: true},
+		"Flags":      {Value: ask.flags, Raw: true},
 		"EnabledKey": {Value: enabledKey},
-		"GOOS":       {Value: goos},
+		"GOOS":       {Value: ask.goos},
 	}}
 	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, app); err != nil {
+	if err := ask.tmpl.Execute(&buf, app); err != nil {
 		return false, err
 	}
 	hasher := sha256.New()
@@ -307,7 +316,7 @@ func buildTarget(target, flags, buildDir, goos string, source []string, tmpl *te
 		return false, err
 	}
 	hash := hasher.Sum(nil)
-	tmp := filepath.Join(buildDir, "src", fmt.Sprintf("%x", hash)[0:7])
+	tmp := filepath.Join(ask.buildDir, "src", fmt.Sprintf("%x", hash)[0:7])
 	os.RemoveAll(tmp)
 	if err := mkDirP(tmp); err != nil {
 		return false, err
