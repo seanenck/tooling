@@ -7,6 +7,11 @@ import (
 	"text/template"
 )
 
+const (
+	// CompletionKeyword is the common completion keyword for bash completions
+	CompletionKeyword = "completions"
+)
+
 // CompletionType help setup completion templating
 type CompletionType struct {
 	Bash string
