@@ -10,23 +10,25 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"text/template"
 )
 
 const (
-	configExt  = ".json"
-	enabledKey = "enabled"
-	srcDir     = "src"
-	appFile    = ".app.go"
-	buildDir   = "target"
-	mainText   = `// Package main handles {{ .App }}
+	configExt    = ".json"
+	enabledKey   = "enabled"
+	srcDir       = "src"
+	appFile      = ".app.go"
+	buildRootDir = "target"
+	mainText     = `// Package main handles {{ .App }}
 package main
 
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -43,9 +45,9 @@ func main() {
 )
 
 var (
-	configFiles = filepath.Join(os.Getenv("HOME"), ".config", "tooling")
-	destDir     = filepath.Join(os.Getenv("HOME"), ".local", "bin")
-	buildFlags  = []string{
+	configOffset = filepath.Join(".config", "tooling")
+	destDir      = filepath.Join(os.Getenv("HOME"), ".local", "bin")
+	buildFlags   = []string{
 		"-trimpath",
 		"-buildmode=pie",
 		"-mod=readonly",
@@ -84,9 +86,11 @@ func build() error {
 	args := os.Args
 	isInstall := false
 	isClean := false
+	offset := 0
 	switch len(args) {
 	case 1:
 	case 2:
+		offset++
 		arg := args[1]
 		switch arg {
 		case "clean":
@@ -96,16 +100,25 @@ func build() error {
 		default:
 			return fmt.Errorf("unknown argument: %s", arg)
 		}
-	default:
-		return fmt.Errorf("unknown arguments: %v", args)
 	}
+	goos := os.Getenv("OS")
+	if goos == "" {
+		goos = runtime.GOOS
+	}
+	if err := os.Setenv("GOOS", goos); err != nil {
+		return err
+	}
+	buildDir := filepath.Join(buildRootDir, goos)
 	if err := mkDirP(buildDir); err != nil {
 		return err
 	}
 	if isClean {
-		return os.RemoveAll(buildDir)
+		return os.RemoveAll(buildRootDir)
 	}
 	if isInstall {
+		if goos != runtime.GOOS {
+			return errors.New("cowardly refusing to cross-install")
+		}
 		files, err := os.ReadDir(buildDir)
 		if err != nil {
 			return err
@@ -126,6 +139,7 @@ func build() error {
 	var configs []string
 	var targetFlags []string
 	targetFlags = append(targetFlags, "make(map[string][]string)")
+	configFiles := filepath.Join(os.Getenv("HOME"), configOffset)
 	dir, err := os.ReadDir(configFiles)
 	if err != nil {
 		return err
@@ -153,16 +167,24 @@ func build() error {
 		if !ok {
 			return fmt.Errorf("invalid settings json, flags array is invalid: %s", name)
 		}
+		hasEnabled := false
+		hasGOOS := false
 		var setFlags []string
 		for _, f := range flags {
 			s, ok := f.(string)
 			if !ok {
 				return fmt.Errorf("%v is not string: %s", f, name)
 			}
-			if s == enabledKey {
-				configs = append(configs, target)
+			switch s {
+			case enabledKey:
+				hasEnabled = true
+			case goos:
+				hasGOOS = true
 			}
 			setFlags = append(setFlags, fmt.Sprintf("\"%s\"", s))
+		}
+		if hasEnabled && hasGOOS {
+			configs = append(configs, target)
 		}
 		targetFlags = append(targetFlags, fmt.Sprintf("\targs.Flags[\"%s\"] = []string{%s}", target, strings.Join(setFlags, ", ")))
 	}
@@ -200,7 +222,7 @@ func build() error {
 	var res []chan buildResult
 	for _, target := range targets {
 		r := make(chan buildResult)
-		go parallelBuild(target, flags, source, tmpl, r)
+		go parallelBuild(target, flags, buildDir, source, tmpl, r)
 		res = append(res, r)
 	}
 	var errored []error
@@ -226,9 +248,9 @@ func build() error {
 	return nil
 }
 
-func parallelBuild(target, flags string, source []string, tmpl *template.Template, res chan buildResult) {
+func parallelBuild(target, flags, buildDir string, source []string, tmpl *template.Template, res chan buildResult) {
 	result := buildResult{name: target}
-	built, err := buildTarget(target, flags, source, tmpl)
+	built, err := buildTarget(target, flags, buildDir, source, tmpl)
 	if err == nil {
 		result.built = built
 	} else {
@@ -237,7 +259,7 @@ func parallelBuild(target, flags string, source []string, tmpl *template.Templat
 	res <- result
 }
 
-func buildTarget(target, flags string, source []string, tmpl *template.Template) (bool, error) {
+func buildTarget(target, flags, buildDir string, source []string, tmpl *template.Template) (bool, error) {
 	src := []string{filepath.Join(srcDir, fmt.Sprintf("%s%s", target, appFile))}
 	src = append(src, source...)
 	obj := filepath.Join(buildDir, target)
@@ -292,7 +314,7 @@ func buildTarget(target, flags string, source []string, tmpl *template.Template)
 		Variables map[string]variable
 	}{properName, map[string]variable{
 		"Name":       {Value: target},
-		"ConfigFile": {Value: filepath.Join(configFiles, fmt.Sprintf("%s%s", target, configExt))},
+		"ConfigFile": {Value: fmt.Sprintf("filepath.Join(os.Getenv(\"HOME\"), \"%s\")", filepath.Join(configOffset, fmt.Sprintf("%s%s", target, configExt))), Raw: true},
 		"Flags":      {Value: flags, Raw: true},
 		"EnabledKey": {Value: enabledKey},
 	}}

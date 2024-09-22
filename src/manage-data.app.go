@@ -27,22 +27,13 @@ func ManageDataApp(a Args) error {
 	cfg := struct {
 		Library    string
 		URL        string
-		Remote     bool
 		Caffeinate bool
-		LockFile   string
 	}{}
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 	home := os.Getenv("HOME")
 	lib := filepath.Join(home, cfg.Library)
-	if cfg.LockFile != "" {
-		lockFile := filepath.Join(home, cfg.LockFile)
-		if err := os.WriteFile(lockFile, []byte{}, 0o644); err != nil {
-			return err
-		}
-		defer os.Remove(lockFile)
-	}
 	files, err := os.ReadDir(lib)
 	if err != nil {
 		return err
@@ -80,41 +71,20 @@ complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
 	if !slices.Contains(opt, cmd) {
 		return fmt.Errorf("%s is an invalid library command", cmd)
 	}
-	res, err := http.DefaultClient.Get(cfg.URL)
-	if err != nil {
-		return err
+	if cfg.URL != "" {
+		res, err := http.DefaultClient.Get(cfg.URL)
+		if err != nil {
+			return err
+		}
+		defer res.Body.Close()
 	}
-	defer res.Body.Close()
 	exe := "caffeinate"
 	var arguments []string
 	script := filepath.Join(lib, cmd)
-	if cfg.Remote {
-		const (
-			sshFlag = "--ssh"
-			sshEnv  = "IS_SSH_TASKS"
-		)
-		exe = script
-		arguments = sub
-		if !slices.Contains(sub, sshFlag) && os.Getenv(sshEnv) == "" {
-			return errors.New("unable to work in remote mode without ssh flag/env")
-		}
-		os.Setenv(sshEnv, "true")
-		arguments = func() []string {
-			var r []string
-			for _, f := range sub {
-				if f == sshFlag {
-					continue
-				}
-				r = append(r, f)
-			}
-			return r
-		}()
+	if cfg.Caffeinate {
+		arguments = append(arguments, script)
 	} else {
-		if cfg.Caffeinate {
-			arguments = append(arguments, script)
-		} else {
-			exe = script
-		}
+		exe = script
 		arguments = append(arguments, sub...)
 	}
 	c := exec.Command(exe, arguments...)
