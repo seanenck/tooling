@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"text/template"
 )
 
 // ManageDataApp handles management of data (wrappers)
@@ -43,16 +42,34 @@ func ManageDataApp(a Args) error {
 		opt = append(opt, f.Name())
 	}
 	if cmd == CompletionKeyword {
-		exe, err := os.Executable()
-		if err != nil {
-			return err
-		}
 		opts := strings.Join(opt, " ")
-		data := struct {
-			Options string
-			Exe     string
-		}{Options: opts, Exe: filepath.Base(exe)}
-		t, err := template.New("t").Parse(`#!/usr/bin/env bash
+		fxn := func(exe string) any {
+			data := struct {
+				Options string
+				Exe     string
+			}{Options: opts, Exe: exe}
+			return data
+		}
+		const (
+			zshCompletion = `#compdef _{{ $.Exe }} {{ $.Exe }}
+_{{ $.Exe }}() {
+  local curcontext="$curcontext" state
+  typeset -A opt_args
+
+  _arguments \
+    '1: :->main'\
+    '*: :->args'
+
+  case $state in
+    main)
+      _arguments '1:main:({{ $.Options }})'
+    ;;
+  esac
+}
+
+compdef _{{ $.Exe }} {{ $.Exe }}
+`
+			bashCompletion = `#!/usr/bin/env bash
 
 _{{ $.Exe }}() {
   local cur
@@ -62,11 +79,9 @@ _{{ $.Exe }}() {
   fi
 }
 
-complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
-		if err != nil {
-			return err
-		}
-		return t.Execute(os.Stdout, data)
+complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
+		)
+		return GenerateCompletion(fxn, CompletionType{Bash: bashCompletion, Zsh: zshCompletion})
 	}
 	if !slices.Contains(opt, cmd) {
 		return fmt.Errorf("%s is an invalid library command", cmd)

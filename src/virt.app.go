@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
-	"text/template"
 )
 
 // VirtApp handles wrapping vfu with virt helpers
@@ -59,19 +58,17 @@ func VirtApp(a Args) error {
 		}
 		return nil
 	case CompletionKeyword:
-		shell := os.Getenv("SHELL")
-		exe, err := os.Executable()
-		if err != nil {
-			return err
+		fxn := func(exe string) any {
+			data := struct {
+				Exe     string
+				List    string
+				Options string
+				Start   string
+			}{Start: startCommand, Exe: exe, List: fmt.Sprintf("%s %s", exe, listCommand), Options: strings.Join([]string{listCommand, statusCommand, startCommand}, " ")}
+			return data
 		}
-		exe = filepath.Base(exe)
-		data := struct {
-			Exe     string
-			List    string
-			Options string
-			Start   string
-		}{Start: startCommand, Exe: filepath.Base(exe), List: fmt.Sprintf("%s %s", exe, listCommand), Options: strings.Join([]string{listCommand, statusCommand, startCommand}, " ")}
-		text := `#!/usr/bin/env bash
+		const (
+			bashCompletion = `#!/usr/bin/env bash
 
 _{{ $.Exe }}() {
   local cur opts
@@ -90,12 +87,8 @@ _{{ $.Exe }}() {
 }
 
 complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
-		switch shell {
-		case "/bin/bash":
-			break
-		case "/bin/zsh":
-			text = `#compdef _virt virt
-_virt() {
+			zshCompletion = `#compdef _{{ $.Exe }}
+_{{ $.Exe }}() {
   local curcontext="$curcontext" state len
   typeset -A opt_args
 
@@ -119,15 +112,9 @@ _virt() {
   esac
 }
 
-compdef _virt virt`
-		default:
-			return fmt.Errorf("no completions for: %s", shell)
-		}
-		t, err := template.New("t").Parse(text)
-		if err != nil {
-			return err
-		}
-		return t.Execute(os.Stdout, data)
+compdef _{{ $.Exe }} {{ $.Exe }}`
+		)
+		return GenerateCompletion(fxn, CompletionType{Bash: bashCompletion, Zsh: zshCompletion})
 	case startCommand:
 		if sub == "" {
 			return errors.New("start requires machine")

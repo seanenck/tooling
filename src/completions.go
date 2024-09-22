@@ -1,0 +1,41 @@
+package main
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"text/template"
+)
+
+// CompletionType help setup completion templating
+type CompletionType struct {
+	Bash string
+	Zsh  string
+}
+
+// GenerateCompletion will generate a multi-shell completion
+func GenerateCompletion(fxn func(exe string) any, c CompletionType) error {
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	exe = filepath.Base(exe)
+	shell := os.Getenv("SHELL")
+	text := ""
+	switch shell {
+	case "/bin/bash":
+		text = c.Bash
+	case "/bin/zsh":
+		text = c.Zsh
+	default:
+		return fmt.Errorf("no completions for: %s", shell)
+	}
+	if text == "" {
+		return fmt.Errorf("empty completion: %s", shell)
+	}
+	t, err := template.New("t").Parse(text)
+	if err != nil {
+		return err
+	}
+	return t.Execute(os.Stdout, fxn(exe))
+}
