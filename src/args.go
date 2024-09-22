@@ -14,6 +14,7 @@ type (
 		Flags      map[string][]string
 		Name       string
 		EnabledKey string
+		GOOS       string
 	}
 )
 

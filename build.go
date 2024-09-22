@@ -29,6 +29,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 )
 
 func main() {
@@ -36,10 +37,17 @@ func main() {
     {{- range $key, $value := .Variables }}
 	args.{{ $key }} = {{ if not $value.Raw }}"{{ end }}{{ $value.Value }}{{ if not $value.Raw }}"{{ end }}
     {{- end }}
-	if err := {{ .App }}(args); err != nil {
+	if err := runApp(args); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
+}
+
+func runApp(args Args) error {
+	if args.GOOS != runtime.GOOS {
+		return fmt.Errorf("unable to run on this OS")
+	}
+	return {{ .App }}(args)
 }
 `
 )
@@ -193,7 +201,7 @@ func build() error {
 	var res []chan buildResult
 	for _, target := range targets {
 		r := make(chan buildResult)
-		go parallelBuild(target, flags, buildDir, source, tmpl, r)
+		go parallelBuild(target, flags, buildDir, goos, source, tmpl, r)
 		res = append(res, r)
 	}
 	var errored []error
@@ -219,9 +227,9 @@ func build() error {
 	return os.WriteFile(filepath.Join(buildDir, "Makefile"), []byte(strings.Join(installs, "\n")), 0o644)
 }
 
-func parallelBuild(target, flags, buildDir string, source []string, tmpl *template.Template, res chan buildResult) {
+func parallelBuild(target, flags, buildDir, goos string, source []string, tmpl *template.Template, res chan buildResult) {
 	result := buildResult{name: target}
-	built, err := buildTarget(target, flags, buildDir, source, tmpl)
+	built, err := buildTarget(target, flags, buildDir, goos, source, tmpl)
 	if err == nil {
 		result.built = built
 	} else {
@@ -230,7 +238,7 @@ func parallelBuild(target, flags, buildDir string, source []string, tmpl *templa
 	res <- result
 }
 
-func buildTarget(target, flags, buildDir string, source []string, tmpl *template.Template) (bool, error) {
+func buildTarget(target, flags, buildDir, goos string, source []string, tmpl *template.Template) (bool, error) {
 	src := []string{filepath.Join(srcDir, fmt.Sprintf("%s%s", target, appFile))}
 	src = append(src, source...)
 	obj := filepath.Join(buildDir, target)
@@ -288,6 +296,7 @@ func buildTarget(target, flags, buildDir string, source []string, tmpl *template
 		"ConfigFile": {Value: fmt.Sprintf("filepath.Join(os.Getenv(\"HOME\"), \"%s\")", filepath.Join(configOffset, fmt.Sprintf("%s%s", target, configExt))), Raw: true},
 		"Flags":      {Value: flags, Raw: true},
 		"EnabledKey": {Value: enabledKey},
+		"GOOS":       {Value: goos},
 	}}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, app); err != nil {
