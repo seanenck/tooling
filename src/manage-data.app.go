@@ -100,8 +100,8 @@ complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
 		arguments = append(arguments, script)
 	} else {
 		exe = script
-		arguments = append(arguments, sub...)
 	}
+	arguments = append(arguments, sub...)
 	c := exec.Command(exe, arguments...)
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
