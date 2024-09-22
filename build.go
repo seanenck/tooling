@@ -17,12 +17,12 @@ import (
 )
 
 const (
-	configExt    = ".json"
-	enabledKey   = "enabled"
-	srcDir       = "src"
-	appFile      = ".app.go"
-	buildRootDir = "target"
-	mainText     = `// Package main handles {{ .App }}
+	destDir    = "DESTDIR"
+	configExt  = ".json"
+	enabledKey = "enabled"
+	srcDir     = "src"
+	appFile    = ".app.go"
+	mainText   = `// Package main handles {{ .App }}
 package main
 
 import (
@@ -46,7 +46,6 @@ func main() {
 
 var (
 	configOffset = filepath.Join(".config", "tooling")
-	destDir      = filepath.Join(os.Getenv("HOME"), ".local", "bin")
 	buildFlags   = []string{
 		"-trimpath",
 		"-buildmode=pie",
@@ -84,8 +83,6 @@ func runCommand(command string, args ...string) error {
 
 func build() error {
 	args := os.Args
-	isInstall := false
-	isClean := false
 	offset := 0
 	switch len(args) {
 	case 1:
@@ -93,10 +90,6 @@ func build() error {
 		offset++
 		arg := args[1]
 		switch arg {
-		case "clean":
-			isClean = true
-		case "install":
-			isInstall = true
 		default:
 			return fmt.Errorf("unknown argument: %s", arg)
 		}
@@ -108,36 +101,13 @@ func build() error {
 	if err := os.Setenv("GOOS", goos); err != nil {
 		return err
 	}
-	buildDir := filepath.Join(buildRootDir, goos)
+	buildDir := os.Getenv("BUILDDIR")
 	if err := mkDirP(buildDir); err != nil {
 		return err
 	}
-	if isClean {
-		return os.RemoveAll(buildRootDir)
-	}
-	if isInstall {
-		if goos != runtime.GOOS {
-			return errors.New("cowardly refusing to cross-install")
-		}
-		files, err := os.ReadDir(buildDir)
-		if err != nil {
-			return err
-		}
-		for _, f := range files {
-			if f.IsDir() {
-				continue
-			}
-			name := f.Name()
-			to := filepath.Join(destDir, name)
-			fmt.Printf("install -> %s (destination: %s)\n", name, to)
-			if err := runCommand("install", "-m755", filepath.Join(buildDir, name), to); err != nil {
-				return err
-			}
-		}
-		return nil
-	}
 	var configs []string
 	var targetFlags []string
+	installs := []string{fmt.Sprintf("%s := %s", destDir, filepath.Join("$(HOME)", ".local", "bin")), "all:"}
 	targetFlags = append(targetFlags, "make(map[string][]string)")
 	configFiles := filepath.Join(os.Getenv("HOME"), configOffset)
 	dir, err := os.ReadDir(configFiles)
@@ -185,6 +155,7 @@ func build() error {
 		}
 		if hasEnabled && hasGOOS {
 			configs = append(configs, target)
+			installs = append(installs, fmt.Sprintf("\tinstall -m755 %s %s", target, filepath.Join(fmt.Sprintf("$(%s)", destDir), target)))
 		}
 		targetFlags = append(targetFlags, fmt.Sprintf("\targs.Flags[\"%s\"] = []string{%s}", target, strings.Join(setFlags, ", ")))
 	}
@@ -245,7 +216,7 @@ func build() error {
 		return errors.Join(errored...)
 	}
 	fmt.Println("\nbuild completed")
-	return nil
+	return os.WriteFile(filepath.Join(buildDir, "Makefile"), []byte(strings.Join(installs, "\n")), 0o644)
 }
 
 func parallelBuild(target, flags, buildDir string, source []string, tmpl *template.Template, res chan buildResult) {
