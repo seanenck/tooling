@@ -59,20 +59,19 @@ func VirtApp(a Args) error {
 		}
 		return nil
 	case CompletionKeyword:
-		if shell := os.Getenv("SHELL"); shell != "/bin/bash" {
-			return fmt.Errorf("no completions for: %s", shell)
-		}
+		shell := os.Getenv("SHELL")
 		exe, err := os.Executable()
 		if err != nil {
 			return err
 		}
+		exe = filepath.Base(exe)
 		data := struct {
 			Exe     string
 			List    string
 			Options string
 			Start   string
-		}{Start: startCommand, Exe: filepath.Base(exe), List: listCommand, Options: strings.Join([]string{listCommand, statusCommand, startCommand}, " ")}
-		t, err := template.New("t").Parse(`#!/usr/bin/env bash
+		}{Start: startCommand, Exe: filepath.Base(exe), List: fmt.Sprintf("%s %s", exe, listCommand), Options: strings.Join([]string{listCommand, statusCommand, startCommand}, " ")}
+		text := `#!/usr/bin/env bash
 
 _{{ $.Exe }}() {
   local cur opts
@@ -83,14 +82,48 @@ _{{ $.Exe }}() {
     if [ "$COMP_CWORD" -eq 2 ]; then
       case "${COMP_WORDS[1]}" in
         "{{ $.Start }}")
-          COMPREPLY=( $(compgen -W "$({{ $.Exe }} {{ $.List }})" -- "$cur") )
+          COMPREPLY=( $(compgen -W "$({{ $.List }})" -- "$cur") )
           ;;
       esac
     fi
   fi
 }
 
-complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`)
+complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
+		switch shell {
+		case "/bin/bash":
+			break
+		case "/bin/zsh":
+			text = `#compdef _virt virt
+_virt() {
+  local curcontext="$curcontext" state len
+  typeset -A opt_args
+
+  _arguments \
+    '1: :->main'\
+    '*: :->args'
+
+  len=${#words[@]}
+  case $state in
+    main)
+      _arguments '1:main:({{ $.Options }})'
+    ;;
+    *)
+      case $words[2] in
+        "{{ $.Start }}")
+          if [ "$len" -eq 3 ]; then
+            compadd "$@" $({{ $.List }})
+          fi
+        ;;
+      esac
+  esac
+}
+
+compdef _virt virt`
+		default:
+			return fmt.Errorf("no completions for: %s", shell)
+		}
+		t, err := template.New("t").Parse(text)
 		if err != nil {
 			return err
 		}
