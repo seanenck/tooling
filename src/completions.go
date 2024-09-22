@@ -18,8 +18,8 @@ type CompletionType struct {
 	Zsh  string
 }
 
-// GenerateCompletion will generate a multi-shell completion
-func GenerateCompletion(fxn func(exe string) any, c CompletionType) error {
+// Generate will generate a multi-shell completion
+func (c CompletionType) Generate(fxn func(exe string) any) error {
 	exe, err := os.Executable()
 	if err != nil {
 		return err

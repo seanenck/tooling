@@ -81,7 +81,7 @@ _{{ $.Exe }}() {
 
 complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
 		)
-		return GenerateCompletion(fxn, CompletionType{Bash: bashCompletion, Zsh: zshCompletion})
+		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion}.Generate(fxn)
 	}
 	if !slices.Contains(opt, cmd) {
 		return fmt.Errorf("%s is an invalid library command", cmd)

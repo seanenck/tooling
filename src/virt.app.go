@@ -114,7 +114,7 @@ _{{ $.Exe }}() {
 
 compdef _{{ $.Exe }} {{ $.Exe }}`
 		)
-		return GenerateCompletion(fxn, CompletionType{Bash: bashCompletion, Zsh: zshCompletion})
+		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion}.Generate(fxn)
 	case startCommand:
 		if sub == "" {
 			return errors.New("start requires machine")
