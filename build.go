@@ -153,8 +153,6 @@ func build() error {
 		if !ok {
 			return fmt.Errorf("invalid settings json, flags array is invalid: %s", name)
 		}
-		hasEnabled := false
-		hasGOOS := false
 		var setFlags []string
 		for _, f := range flags {
 			s, ok := f.(string)
@@ -162,16 +160,12 @@ func build() error {
 				return fmt.Errorf("%v is not string: %s", f, name)
 			}
 			switch s {
-			case enabledKey:
-				hasEnabled = true
 			case goos:
-				hasGOOS = true
+				configs = append(configs, target)
+				installs = append(installs, fmt.Sprintf("\tinstall -m755 %s %s", target, filepath.Join(fmt.Sprintf("$(%s)", destDir), target)))
+				setFlags = append(setFlags, fmt.Sprintf("\"%s\"", enabledKey))
 			}
 			setFlags = append(setFlags, fmt.Sprintf("\"%s\"", s))
-		}
-		if hasEnabled && hasGOOS {
-			configs = append(configs, target)
-			installs = append(installs, fmt.Sprintf("\tinstall -m755 %s %s", target, filepath.Join(fmt.Sprintf("$(%s)", destDir), target)))
 		}
 		targetFlags = append(targetFlags, fmt.Sprintf("\targs.Flags[\"%s\"] = []string{%s}", target, strings.Join(setFlags, ", ")))
 	}

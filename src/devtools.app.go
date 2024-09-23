@@ -24,20 +24,18 @@ func updateByTool(tool string, args, remotes []string) error {
 
 // DevtoolsApp helps manage developer tool installs
 func DevtoolsApp(a Args) error {
-	cfg := struct {
-		Go    []string
-		Cargo []string
-	}{}
+	type tool struct {
+		Arguments []string
+		Packages  []string
+	}
+	cfg := make(map[string]tool)
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 
-	for k, v := range map[string][]string{
-		"go":    cfg.Go,
-		"cargo": cfg.Cargo,
-	} {
+	for k, v := range cfg {
 		fmt.Printf("%s updates:\n", k)
-		if err := updateByTool(k, []string{"install"}, v); err != nil {
+		if err := updateByTool(k, v.Arguments, v.Packages); err != nil {
 			return err
 		}
 	}
