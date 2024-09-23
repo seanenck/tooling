@@ -50,7 +50,7 @@ func UpdateSystemApp(a Args) error {
 	}
 	var updates []string
 	for k, v := range a.Flags {
-		if slices.Contains(v, a.Name) && slices.Contains(v, a.EnabledKey) {
+		if slices.Contains(v, a.Name) {
 			updates = append(updates, k)
 		}
 	}

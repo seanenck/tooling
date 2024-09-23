@@ -17,12 +17,11 @@ import (
 )
 
 const (
-	destDir    = "DESTDIR"
-	configExt  = ".json"
-	enabledKey = "enabled"
-	srcDir     = "src"
-	appFile    = ".app.go"
-	mainText   = `// Package main handles {{ .App }}
+	destDir   = "DESTDIR"
+	configExt = ".json"
+	srcDir    = "src"
+	appFile   = ".app.go"
+	mainText  = `// Package main handles {{ .App }}
 package main
 
 import (
@@ -154,6 +153,7 @@ func build() error {
 			return fmt.Errorf("invalid settings json, flags array is invalid: %s", name)
 		}
 		var setFlags []string
+		isEnabled := false
 		for _, f := range flags {
 			s, ok := f.(string)
 			if !ok {
@@ -161,11 +161,14 @@ func build() error {
 			}
 			switch s {
 			case goos:
+				isEnabled = true
 				configs = append(configs, target)
 				installs = append(installs, fmt.Sprintf("\tinstall -m755 %s %s", target, filepath.Join(fmt.Sprintf("$(%s)", destDir), target)))
-				setFlags = append(setFlags, fmt.Sprintf("\"%s\"", enabledKey))
 			}
 			setFlags = append(setFlags, fmt.Sprintf("\"%s\"", s))
+		}
+		if !isEnabled {
+			continue
 		}
 		targetFlags = append(targetFlags, fmt.Sprintf("\targs.Flags[\"%s\"] = []string{%s}", target, strings.Join(setFlags, ", ")))
 	}
@@ -298,7 +301,6 @@ func buildTarget(ask buildRequest) (bool, error) {
 		"Name":       {Value: ask.target},
 		"ConfigFile": {Value: fmt.Sprintf("filepath.Join(os.Getenv(\"HOME\"), \"%s\")", filepath.Join(configOffset, fmt.Sprintf("%s%s", ask.target, configExt))), Raw: true},
 		"Flags":      {Value: ask.flags, Raw: true},
-		"EnabledKey": {Value: enabledKey},
 		"GOOS":       {Value: ask.goos},
 	}}
 	var buf bytes.Buffer
