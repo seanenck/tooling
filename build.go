@@ -164,6 +164,7 @@ func build() error {
 				isEnabled = true
 				configs = append(configs, target)
 				installs = append(installs, fmt.Sprintf("\tinstall -m755 %s %s", target, filepath.Join(fmt.Sprintf("$(%s)", destDir), target)))
+				continue
 			}
 			setFlags = append(setFlags, fmt.Sprintf("\"%s\"", s))
 		}
