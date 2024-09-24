@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 	"text/template"
 )
 
@@ -27,7 +28,7 @@ func (c CompletionType) Generate(data any) error {
 		text = c.Bash
 	case "/bin/zsh":
 		if c.ZshCompDef {
-			text = fmt.Sprintf("#compdef _{{ $.Exe }}\n\n_{{ $.Exe }}() {\n%s\n}\n\ncompdef _{{ $.Exe }} {{ $.Exe }}", c.Zsh)
+			text = fmt.Sprintf("#compdef _{{ $.Exe }}\n\n_{{ $.Exe }}() {\n%s\n}\n\ncompdef _{{ $.Exe }} {{ $.Exe }}", strings.TrimPrefix(c.Zsh, "\n"))
 		} else {
 			text = c.Zsh
 		}
