@@ -160,7 +160,7 @@ func build() error {
 				return fmt.Errorf("%v is not string: %s", f, name)
 			}
 			switch s {
-			case goos:
+			case goos, "all":
 				isEnabled = true
 				configs = append(configs, target)
 				installs = append(installs, fmt.Sprintf("\tinstall -m755 %s %s", target, filepath.Join(fmt.Sprintf("$(%s)", destDir), target)))
