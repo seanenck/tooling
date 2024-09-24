@@ -36,14 +36,14 @@ func main() {
     {{- range $key, $value := .Variables }}
 	args.{{ $key }} = {{ if not $value.Raw }}"{{ end }}{{ $value.Value }}{{ if not $value.Raw }}"{{ end }}
     {{- end }}
-	if err := runApp(args); err != nil {
+	if err := runApp(args, runtime.GOOS == "{{ $.GOOS }}"); err != nil {
 		fmt.Fprintf(os.Stderr, "%v\n", err)
 		os.Exit(1)
 	}
 }
 
-func runApp(args Args) error {
-	if args.GOOS != runtime.GOOS {
+func runApp(args Args, allowed bool) error {
+	if !allowed {
 		return fmt.Errorf("unable to run on this OS")
 	}
 	return {{ .App }}(args)
@@ -298,12 +298,12 @@ func buildTarget(ask buildRequest) (bool, error) {
 	app := struct {
 		App       string
 		Variables map[string]variable
+		GOOS      string
 	}{properName, map[string]variable{
 		"Name":       {Value: ask.target},
 		"ConfigFile": {Value: fmt.Sprintf("filepath.Join(os.Getenv(\"HOME\"), \"%s\")", filepath.Join(configOffset, fmt.Sprintf("%s%s", ask.target, configExt))), Raw: true},
 		"Flags":      {Value: ask.flags, Raw: true},
-		"GOOS":       {Value: ask.goos},
-	}}
+	}, ask.goos}
 	var buf bytes.Buffer
 	if err := ask.tmpl.Execute(&buf, app); err != nil {
 		return false, err

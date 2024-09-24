@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"text/template"
 )
 
@@ -19,12 +18,7 @@ type CompletionType struct {
 }
 
 // Generate will generate a multi-shell completion
-func (c CompletionType) Generate(fxn func(exe string) any) error {
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-	exe = filepath.Base(exe)
+func (c CompletionType) Generate(data any) error {
 	shell := os.Getenv("SHELL")
 	text := ""
 	switch shell {
@@ -42,5 +36,5 @@ func (c CompletionType) Generate(fxn func(exe string) any) error {
 	if err != nil {
 		return err
 	}
-	return t.Execute(os.Stdout, fxn(exe))
+	return t.Execute(os.Stdout, data)
 }

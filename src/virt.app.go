@@ -58,15 +58,12 @@ func VirtApp(a Args) error {
 		}
 		return nil
 	case CompletionKeyword:
-		fxn := func(exe string) any {
-			data := struct {
-				Exe     string
-				List    string
-				Options string
-				Start   string
-			}{Start: startCommand, Exe: exe, List: fmt.Sprintf("%s %s", exe, listCommand), Options: strings.Join([]string{listCommand, statusCommand, startCommand}, " ")}
-			return data
-		}
+		data := struct {
+			Exe     string
+			List    string
+			Options string
+			Start   string
+		}{Start: startCommand, Exe: a.Name, List: fmt.Sprintf("%s %s", a.Name, listCommand), Options: strings.Join([]string{listCommand, statusCommand, startCommand}, " ")}
 		const (
 			bashCompletion = `#!/usr/bin/env bash
 
@@ -114,7 +111,7 @@ _{{ $.Exe }}() {
 
 compdef _{{ $.Exe }} {{ $.Exe }}`
 		)
-		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion}.Generate(fxn)
+		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion}.Generate(data)
 	case startCommand:
 		if sub == "" {
 			return errors.New("start requires machine")

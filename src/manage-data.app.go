@@ -43,13 +43,10 @@ func ManageDataApp(a Args) error {
 	}
 	if cmd == CompletionKeyword {
 		opts := strings.Join(opt, " ")
-		fxn := func(exe string) any {
-			data := struct {
-				Options string
-				Exe     string
-			}{Options: opts, Exe: exe}
-			return data
-		}
+		data := struct {
+			Options string
+			Exe     string
+		}{Options: opts, Exe: a.Name}
 		const (
 			zshCompletion = `#compdef _{{ $.Exe }} {{ $.Exe }}
 _{{ $.Exe }}() {
@@ -81,7 +78,7 @@ _{{ $.Exe }}() {
 
 complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
 		)
-		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion}.Generate(fxn)
+		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion}.Generate(data)
 	}
 	if !slices.Contains(opt, cmd) {
 		return fmt.Errorf("%s is an invalid library command", cmd)

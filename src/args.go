@@ -13,7 +13,6 @@ type (
 		ConfigFile string
 		Flags      map[string][]string
 		Name       string
-		GOOS       string
 	}
 )
 
