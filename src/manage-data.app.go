@@ -48,8 +48,7 @@ func ManageDataApp(a Args) error {
 			Exe     string
 		}{Options: opts, Exe: a.Name}
 		const (
-			zshCompletion = `#compdef _{{ $.Exe }} {{ $.Exe }}
-_{{ $.Exe }}() {
+			zshCompletion = `
   local curcontext="$curcontext" state
   typeset -A opt_args
 
@@ -61,11 +60,7 @@ _{{ $.Exe }}() {
     main)
       _arguments '1:main:({{ $.Options }})'
     ;;
-  esac
-}
-
-compdef _{{ $.Exe }} {{ $.Exe }}
-`
+  esac`
 			bashCompletion = `#!/usr/bin/env bash
 
 _{{ $.Exe }}() {
@@ -78,7 +73,7 @@ _{{ $.Exe }}() {
 
 complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
 		)
-		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion}.Generate(data)
+		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion, ZshCompDef: true}.Generate(data)
 	}
 	if !slices.Contains(opt, cmd) {
 		return fmt.Errorf("%s is an invalid library command", cmd)

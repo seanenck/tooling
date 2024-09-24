@@ -84,8 +84,7 @@ _{{ $.Exe }}() {
 }
 
 complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
-			zshCompletion = `#compdef _{{ $.Exe }}
-_{{ $.Exe }}() {
+			zshCompletion = `
   local curcontext="$curcontext" state len
   typeset -A opt_args
 
@@ -106,12 +105,9 @@ _{{ $.Exe }}() {
           fi
         ;;
       esac
-  esac
-}
-
-compdef _{{ $.Exe }} {{ $.Exe }}`
+  esac`
 		)
-		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion}.Generate(data)
+		return CompletionType{Bash: bashCompletion, Zsh: zshCompletion, ZshCompDef: true}.Generate(data)
 	case startCommand:
 		if sub == "" {
 			return errors.New("start requires machine")
