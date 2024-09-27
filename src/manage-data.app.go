@@ -24,6 +24,7 @@ func ManageDataApp(a Args) error {
 		sub = args[2:]
 	}
 	cfg := struct {
+		LockFile   string
 		Library    string
 		URL        string
 		Caffeinate bool
@@ -32,6 +33,14 @@ func ManageDataApp(a Args) error {
 		return err
 	}
 	home := os.Getenv("HOME")
+	lockFile := filepath.Join(home, cfg.LockFile)
+	if PathExists(lockFile) {
+		return nil
+	}
+	if err := os.WriteFile(lockFile, []byte{}, 0o644); err != nil {
+		return err
+	}
+	defer os.Remove(lockFile)
 	lib := filepath.Join(home, cfg.Library)
 	files, err := os.ReadDir(lib)
 	if err != nil {
