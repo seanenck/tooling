@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 	"text/template"
+	"time"
 )
 
 // AlpineImageApp helps build a personal alpine image
@@ -24,12 +25,13 @@ func AlpineImageApp(a Args) error {
 		Template  []string
 	}
 	cfg := struct {
-		Edge         bool
 		Repository   repo
 		Architecture []string
 		Name         string
 		Source       source
 		Output       string
+		World        string
+		Timestamp    string
 	}{}
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
@@ -52,13 +54,14 @@ func AlpineImageApp(a Args) error {
 		}
 		arch = strings.TrimSpace(string(b))
 	}
-	i, err := readFileToTrimmedLines("/etc/os-release")
-	if err != nil {
-		return err
-	}
-	rawTag := "edge"
-	tag := rawTag
-	if !cfg.Edge {
+	var tag string
+	flags := os.Args
+	switch len(flags) {
+	case 1:
+		i, err := readFileToTrimmedLines("/etc/os-release")
+		if err != nil {
+			return err
+		}
 		for line := range i {
 			v, ok := strings.CutPrefix(line, "VERSION_ID=")
 			if ok {
@@ -69,10 +72,21 @@ func AlpineImageApp(a Args) error {
 		if tag == "" {
 			return errors.New("unable to parse current os tag")
 		}
-		rawTag = tag
-		tag = fmt.Sprintf("v%s", strings.Join(strings.Split(tag, ".")[0:2], "."))
+
+	case 2:
+		tag = flags[1]
+	default:
+		return fmt.Errorf("unknown arguments, too many: %v", flags)
 	}
-	i, err = readFileToTrimmedLines("/etc/apk/world")
+	rawTag := tag
+	if strings.Contains(rawTag, ".") {
+		tag = fmt.Sprintf("v%s", strings.Join(strings.Split(tag, ".")[0:2], "."))
+	} else {
+		if rawTag != "edge" {
+			return fmt.Errorf("unknown version/not edge: %s", rawTag)
+		}
+	}
+	i, err := readFileToTrimmedLines(cfg.World)
 	if err != nil {
 		return err
 	}
@@ -152,12 +166,14 @@ func AlpineImageApp(a Args) error {
 	found := false
 	home := os.Getenv("HOME")
 	to := filepath.Join(home, cfg.Output)
+	now := time.Now().Format(cfg.Timestamp)
 	for _, f := range files {
 		name := f.Name()
 		if strings.HasSuffix(name, ".iso") {
 			fmt.Printf("artifact: %s\n", name)
 			found = true
-			if err := exec.Command("mv", filepath.Join(out, name), to).Run(); err != nil {
+			dest := filepath.Join(to, fmt.Sprintf("%s.%s", now, name))
+			if err := exec.Command("mv", filepath.Join(out, name), dest).Run(); err != nil {
 				return err
 			}
 		}
