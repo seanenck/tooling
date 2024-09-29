@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"text/template"
 	"time"
@@ -80,7 +81,16 @@ func AlpineImageApp(a Args) error {
 	}
 	rawTag := tag
 	if strings.Contains(rawTag, ".") {
-		tag = fmt.Sprintf("v%s", strings.Join(strings.Split(tag, ".")[0:2], "."))
+		parts := strings.Split(tag, ".")
+		if len(parts) != 3 {
+			return fmt.Errorf("version must be X.Y.Z (have: %s)", parts)
+		}
+		for _, p := range parts {
+			if _, err := strconv.Atoi(p); err != nil {
+				return fmt.Errorf("invalid version, non-numeric? %v (%w)", parts, err)
+			}
+		}
+		tag = fmt.Sprintf("v%s", strings.Join(parts[0:2], "."))
 	} else {
 		if rawTag != "edge" {
 			return fmt.Errorf("unknown version/not edge: %s", rawTag)
