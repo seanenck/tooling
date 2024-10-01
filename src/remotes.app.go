@@ -17,9 +17,10 @@ import (
 func RemotesApp(a Args) error {
 	home := os.Getenv("HOME")
 	type modeType struct {
-		Command []string
-		Filter  string
-		Split   string
+		Command   string
+		Arguments []string
+		Filter    string
+		Split     string
 	}
 	cfg := struct {
 		Sources map[string]string
@@ -66,11 +67,8 @@ func RemotesApp(a Args) error {
 			return fmt.Errorf("unknown source mode type: %s (%s)", typed, source)
 		}
 		fmt.Printf("getting: %s\n", source)
-		exe := cmd.Command[0]
-		var args []string
-		if len(cmd.Command) > 1 {
-			args = append(args, cmd.Command[1:]...)
-		}
+		exe := cmd.Command
+		args := cmd.Arguments
 		args = append(args, source)
 		out, err := exec.Command(exe, args...).Output()
 		if err != nil {
