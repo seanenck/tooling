@@ -13,61 +13,23 @@ import (
 	"strings"
 )
 
-func parseModeOpts[T any](mode, key string, modes map[string]map[string]interface{}) (*T, error) {
-	val, ok := modes[mode]
-	if !ok {
-		return nil, fmt.Errorf("unknown mode: %s", mode)
-	}
-	read, ok := val[key]
-	if !ok {
-		return nil, fmt.Errorf("unknown mode key: %s %s", mode, key)
-	}
-	actual, ok := read.(T)
-	if !ok {
-		return nil, fmt.Errorf("unknown mode key, is not of type: %s %s", mode, key)
-	}
-	return &actual, nil
-}
-
 // RemotesApp helps sync release tags from remotes for update tracking
 func RemotesApp(a Args) error {
-	const (
-		gitMode = "Git"
-		webMode = "HTTP"
-	)
 	home := os.Getenv("HOME")
+	type modeType struct {
+		Command []string
+		Filter  []string
+		Split   string
+	}
 	cfg := struct {
 		Sources map[string]string
 		State   string
-		Modes   map[string]map[string]interface{}
+		Modes   map[string]modeType
 	}{}
 	if err := a.ReadConfig(&cfg); err != nil {
 		return err
 	}
 
-	modes := cfg.Modes
-	rawWebModes, err := parseModeOpts[map[string]interface{}](webMode, "Filters", modes)
-	if err != nil {
-		return err
-	}
-	webModes := *rawWebModes
-
-	var filters []*regexp.Regexp
-	gitFilters, err := parseModeOpts[[]interface{}](gitMode, "Filter", modes)
-	if err != nil {
-		return err
-	}
-	for _, f := range *gitFilters {
-		text, ok := f.(string)
-		if !ok {
-			return fmt.Errorf("unable to compile filter, unknown type: %v", f)
-		}
-		r, err := regexp.Compile(text)
-		if err != nil {
-			return err
-		}
-		filters = append(filters, r)
-	}
 	state := filepath.Join(home, cfg.State)
 	var had []string
 	isInit := !PathExists(state)
@@ -86,132 +48,70 @@ func RemotesApp(a Args) error {
 			had = append(had, t)
 		}
 	}
-	cmds := make(map[string][]string)
-	for k, v := range modes {
-		c, ok := v["Command"]
-		if !ok {
-			return fmt.Errorf("unable to find command for mode: %s", k)
-		}
-		raw, ok := c.([]interface{})
-		if !ok {
-			return fmt.Errorf("command for %s is not array", k)
-		}
-		var actions []string
-		for _, r := range raw {
-			s, ok := r.(string)
-			if !ok {
-				return fmt.Errorf("command for %s is not string: %v", k, raw)
-			}
-			actions = append(actions, s)
-		}
-		if len(actions) == 0 {
-			return fmt.Errorf("empty commands: %s", k)
-		}
-		cmds[k] = actions
-	}
 	var now []string
 	versioner := func(n, v string) {
 		now = append(now, fmt.Sprintf("%s %s", n, v))
 	}
-	for source, raw := range cfg.Sources {
-		typed := raw
-		subType := ""
-		if strings.Contains(raw, "|") {
-			parts := strings.Split(raw, "|")
-			if len(parts) != 2 {
-				return fmt.Errorf("invalid sub type: %v", parts)
+	filterSet := make(map[string][]*regexp.Regexp)
+	for k, v := range cfg.Modes {
+		var f []*regexp.Regexp
+		for _, r := range v.Filter {
+			r, err := regexp.Compile(r)
+			if err != nil {
+				return err
 			}
-			typed = parts[0]
-			subType = parts[1]
+			f = append(f, r)
+		}
+		filterSet[k] = f
+	}
+	for source, typed := range cfg.Sources {
+		cmd, ok := cfg.Modes[typed]
+		if !ok {
+			return fmt.Errorf("unknown source mode type: %s (%s)", typed, source)
 		}
 		fmt.Printf("getting: %s\n", source)
-		cmd, ok := cmds[typed]
-		if !ok {
-			return fmt.Errorf("unknown remote mode: %s", typed)
-		}
-		exe := cmd[0]
+		exe := cmd.Command[0]
 		var args []string
-		if len(cmd) > 1 {
-			args = append(args, cmd[1:]...)
+		if len(cmd.Command) > 1 {
+			args = append(args, cmd.Command[1:]...)
 		}
 		args = append(args, source)
 		out, err := exec.Command(exe, args...).Output()
 		if err != nil {
 			return err
 		}
-		switch typed {
-		case webMode:
-			s, ok := webModes[subType]
-			if !ok {
-				return fmt.Errorf("unknown web mode: %s", subType)
+		if len(cmd.Filter) == 0 {
+			return fmt.Errorf("no filters for: %s", source)
+		}
+		name := filepath.Base(source)
+		for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+			t := strings.TrimSpace(line)
+			if t == "" {
+				continue
 			}
-			def, ok := s.(map[string]interface{})
-			if !ok {
-				return fmt.Errorf("invalid definition for web mode: %s %v", subType, def)
+			part := line
+			ready := true
+			if len(cmd.Split) > 0 {
+				parts := strings.Split(line, "\t")
+				ready = len(parts) > 1
+				if ready {
+					part = strings.Join(parts[1:], " ")
+				}
 			}
-			var start, end string
-			for k, v := range def {
-				r, ok := v.(string)
+			if ready {
+				allowed := true
+				filters, ok := filterSet[typed]
 				if !ok {
-					continue
+					return fmt.Errorf("no filters for type: %s", typed)
 				}
-				switch k {
-				case "Start":
-					start = r
-				case "End":
-					end = r
-				default:
-					return fmt.Errorf("unexpected web selector key: %s", k)
-				}
-			}
-
-			if start == "" || end == "" {
-				return fmt.Errorf("invalid web selector: %v", def)
-			}
-			startRegex, err := regexp.Compile(start)
-			if err != nil {
-				return err
-			}
-			endRegex, err := regexp.Compile(end)
-			if err != nil {
-				return err
-			}
-
-			for _, line := range strings.Split(string(out), "\n") {
-				from := startRegex.FindStringIndex(line)
-				if len(from) == 0 {
-					continue
-				}
-				selected := line[from[0]:]
-				to := endRegex.FindStringIndex(selected)
-				if len(to) == 0 {
-					continue
-				}
-				selected = selected[0:to[1]]
-				versioner(subType, selected)
-			}
-		case gitMode:
-			{
-				name := filepath.Base(source)
-				for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
-					t := strings.TrimSpace(line)
-					if t == "" {
-						continue
+				for _, r := range filters {
+					if !r.MatchString(part) {
+						allowed = false
+						break
 					}
-					parts := strings.Split(line, "\t")
-					if len(parts) > 1 {
-						part := strings.Join(parts[1:], " ")
-						allowed := true
-						for _, r := range filters {
-							if r.MatchString(part) {
-								continue
-							}
-							allowed = false
-						}
-						if allowed {
-							versioner(name, part)
-						}
-					}
+				}
+				if allowed {
+					versioner(name, part)
 				}
 			}
 		}
