@@ -18,7 +18,7 @@ func RemotesApp(a Args) error {
 	home := os.Getenv("HOME")
 	type modeType struct {
 		Command []string
-		Filter  []string
+		Filter  string
 		Split   string
 	}
 	cfg := struct {
@@ -52,17 +52,13 @@ func RemotesApp(a Args) error {
 	versioner := func(n, v string) {
 		now = append(now, fmt.Sprintf("%s %s", n, v))
 	}
-	filterSet := make(map[string][]*regexp.Regexp)
+	filterSet := make(map[string]*regexp.Regexp)
 	for k, v := range cfg.Modes {
-		var f []*regexp.Regexp
-		for _, r := range v.Filter {
-			r, err := regexp.Compile(r)
-			if err != nil {
-				return err
-			}
-			f = append(f, r)
+		r, err := regexp.Compile(v.Filter)
+		if err != nil {
+			return err
 		}
-		filterSet[k] = f
+		filterSet[k] = r
 	}
 	for source, typed := range cfg.Sources {
 		cmd, ok := cfg.Modes[typed]
@@ -99,19 +95,13 @@ func RemotesApp(a Args) error {
 				}
 			}
 			if ready {
-				allowed := true
-				filters, ok := filterSet[typed]
+				filter, ok := filterSet[typed]
 				if !ok {
 					return fmt.Errorf("no filters for type: %s", typed)
 				}
-				for _, r := range filters {
-					if !r.MatchString(part) {
-						allowed = false
-						break
-					}
-				}
-				if allowed {
-					versioner(name, part)
+				matches := filter.FindStringSubmatch(part)
+				if len(matches) > 0 {
+					versioner(name, matches[1])
 				}
 			}
 		}
