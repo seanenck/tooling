@@ -20,7 +20,6 @@ func RemotesApp(a Args) error {
 		Command   string
 		Arguments []string
 		Filter    string
-		Split     string
 	}
 	cfg := struct {
 		Sources map[string]string
@@ -83,24 +82,13 @@ func RemotesApp(a Args) error {
 			if t == "" {
 				continue
 			}
-			part := line
-			ready := true
-			if len(cmd.Split) > 0 {
-				parts := strings.Split(line, "\t")
-				ready = len(parts) > 1
-				if ready {
-					part = strings.Join(parts[1:], " ")
-				}
+			filter, ok := filterSet[typed]
+			if !ok {
+				return fmt.Errorf("no filters for type: %s", typed)
 			}
-			if ready {
-				filter, ok := filterSet[typed]
-				if !ok {
-					return fmt.Errorf("no filters for type: %s", typed)
-				}
-				matches := filter.FindStringSubmatch(part)
-				if len(matches) > 0 {
-					versioner(name, matches[1])
-				}
+			matches := filter.FindStringSubmatch(line)
+			if len(matches) > 0 {
+				versioner(name, matches[1])
 			}
 		}
 	}
