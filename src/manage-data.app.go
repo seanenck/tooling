@@ -33,14 +33,18 @@ func ManageDataApp(a Args) error {
 		return err
 	}
 	home := os.Getenv("HOME")
-	lockFile := filepath.Join(home, cfg.LockFile)
-	if PathExists(lockFile) {
-		return nil
+	const isNoLock = "DATA_NOLOCK"
+	if os.Getenv(isNoLock) == "" {
+		lockFile := filepath.Join(home, cfg.LockFile)
+		if PathExists(lockFile) {
+			return nil
+		}
+		if err := os.WriteFile(lockFile, []byte{}, 0o644); err != nil {
+			return err
+		}
+		defer os.Remove(lockFile)
 	}
-	if err := os.WriteFile(lockFile, []byte{}, 0o644); err != nil {
-		return err
-	}
-	defer os.Remove(lockFile)
+	os.Setenv(isNoLock, "true")
 	lib := filepath.Join(home, cfg.Library)
 	files, err := os.ReadDir(lib)
 	if err != nil {
