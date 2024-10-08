@@ -21,16 +21,16 @@ func RemotesApp(a Args) error {
 		Arguments []string
 		Filter    string
 	}
-	cfg := struct {
+	cfg := Configuration[struct {
 		Sources map[string]string
 		State   string
 		Modes   map[string]modeType
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 
-	state := filepath.Join(home, cfg.State)
+	state := filepath.Join(home, cfg.Settings.State)
 	var had []string
 	isInit := !PathExists(state)
 	if isInit {
@@ -53,15 +53,15 @@ func RemotesApp(a Args) error {
 		now = append(now, fmt.Sprintf("%s %s", n, v))
 	}
 	filterSet := make(map[string]*regexp.Regexp)
-	for k, v := range cfg.Modes {
+	for k, v := range cfg.Settings.Modes {
 		r, err := regexp.Compile(v.Filter)
 		if err != nil {
 			return err
 		}
 		filterSet[k] = r
 	}
-	for source, typed := range cfg.Sources {
-		cmd, ok := cfg.Modes[typed]
+	for source, typed := range cfg.Settings.Sources {
+		cmd, ok := cfg.Settings.Modes[typed]
 		if !ok {
 			return fmt.Errorf("unknown source mode type: %s (%s)", typed, source)
 		}

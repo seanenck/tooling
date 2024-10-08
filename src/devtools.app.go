@@ -28,12 +28,12 @@ func DevtoolsApp(a Args) error {
 		Arguments []string
 		Packages  []string
 	}
-	cfg := make(map[string]tool)
-	if err := a.ReadConfig(&cfg); err != nil {
+	cfg := Configuration[map[string]tool]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 
-	for k, v := range cfg {
+	for k, v := range cfg.Settings {
 		fmt.Printf("%s updates:\n", k)
 		if err := updateByTool(k, v.Arguments, v.Packages); err != nil {
 			return err

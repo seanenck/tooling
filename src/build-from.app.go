@@ -41,16 +41,16 @@ func BuildFromApp(a Args) error {
 		Build     []string
 		Install   []string
 	}
-	cfg := struct {
+	cfg := Configuration[struct {
 		Builds map[string]build
 		Root   string
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 	found := false
 	var rules build
-	for k, v := range cfg.Builds {
+	for k, v := range cfg.Settings.Builds {
 		if PathExists(k) {
 			rules = v
 			found = true
@@ -67,7 +67,7 @@ func BuildFromApp(a Args) error {
 	data := struct {
 		RootDir string
 		CurDir  string
-	}{cfg.Root, cwd}
+	}{cfg.Settings.Root, cwd}
 	for _, set := range [][]string{rules.Configure, rules.Build, rules.Install} {
 		if err := doBuildStep(data, set); err != nil {
 			return err

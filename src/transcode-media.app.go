@@ -21,10 +21,10 @@ func TranscodeMediaApp(a Args) error {
 		Extensions []string
 		Command    []string
 	}
-	cfg := struct {
+	cfg := Configuration[struct {
 		Transcode []Transcoder
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 	files, err := os.ReadDir(".")
@@ -33,7 +33,7 @@ func TranscodeMediaApp(a Args) error {
 	}
 	var transcoders []Transcoder
 	var allExtensions []string
-	for _, transcode := range cfg.Transcode {
+	for _, transcode := range cfg.Settings.Transcode {
 		if !transcode.Enabled {
 			continue
 		}

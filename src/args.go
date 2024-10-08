@@ -5,34 +5,35 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path/filepath"
 )
 
 type (
 	// Args are common app arguments
 	Args struct {
-		ConfigFile string
-		Flags      map[string][]string
-		Name       string
+		Config struct {
+			Dir       string
+			Extension string
+		}
+		Name string
+	}
+	// Configuration is the common core configuration
+	Configuration[T any] struct {
+		Flags    []string
+		Settings T
 	}
 )
 
-// ReadConfig reads the argument JSON configuration file
-func (a Args) ReadConfig(obj any) error {
-	b, err := os.ReadFile(a.ConfigFile)
+// Load will load the arguments into the configuration
+func (c *Configuration[T]) Load(a Args) error {
+	return c.LoadFile(filepath.Join(a.Config.Dir, fmt.Sprintf("%s%s", a.Name, a.Config.Extension)))
+}
+
+// LoadFile will load the file into the configuration
+func (c *Configuration[T]) LoadFile(configFile string) error {
+	b, err := os.ReadFile(configFile)
 	if err != nil {
 		return err
 	}
-	settings := make(map[string]interface{})
-	if err := json.Unmarshal(b, &settings); err != nil {
-		return err
-	}
-	sub, ok := settings["Settings"]
-	if !ok {
-		return fmt.Errorf("unable to find settings: %v", settings)
-	}
-	j, err := json.Marshal(sub)
-	if err != nil {
-		return err
-	}
-	return json.Unmarshal(j, obj)
+	return json.Unmarshal(b, &c)
 }

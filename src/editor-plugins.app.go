@@ -59,14 +59,12 @@ func EditorPluginsApp(a Args) error {
 		Enabled bool
 		Plugins []string
 	}
-	cfg := struct {
-		Plugins config
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	cfg := Configuration[struct{ Plugins config }]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 
-	for _, c := range cfg.Plugins {
+	for _, c := range cfg.Settings.Plugins {
 		if !c.Enabled {
 			continue
 		}

@@ -142,16 +142,16 @@ func uploadHandler(store string, extensions []string, r *http.Request) error {
 
 // FileUploadApp handles file upload helper
 func FileUploadApp(a Args) error {
-	cfg := struct {
+	cfg := Configuration[struct {
 		Bind       string
 		Store      string
 		Extensions []string
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
-	store := filepath.Join(os.Getenv("HOME"), cfg.Store)
-	downloadName := strings.ToLower(cfg.Store)
+	store := filepath.Join(os.Getenv("HOME"), cfg.Settings.Store)
+	downloadName := strings.ToLower(cfg.Settings.Store)
 	t, err := template.New("t").Parse(strings.Replace(indexHTML, downloadValue, downloadName, 1))
 	if err != nil {
 		return err
@@ -161,7 +161,7 @@ func FileUploadApp(a Args) error {
 	}
 	router := http.NewServeMux()
 	router.HandleFunc(isUploadTo, func(w http.ResponseWriter, r *http.Request) {
-		if err := uploadHandler(store, cfg.Extensions, r); err != nil {
+		if err := uploadHandler(store, cfg.Settings.Extensions, r); err != nil {
 			onError("upload error", err)
 		}
 		http.Redirect(w, r, isUpload, http.StatusSeeOther)
@@ -174,7 +174,7 @@ func FileUploadApp(a Args) error {
 	prefix := fmt.Sprintf("/%s/", downloadName)
 	router.Handle(prefix, http.StripPrefix(prefix, http.FileServer(http.Dir(store))))
 	s := &http.Server{
-		Addr:    cfg.Bind,
+		Addr:    cfg.Settings.Bind,
 		Handler: router,
 	}
 	return s.ListenAndServe()

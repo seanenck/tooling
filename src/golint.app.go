@@ -22,17 +22,17 @@ func GolintApp(a Args) error {
 			Command []string
 		}
 	)
-	cfg := struct {
+	cfg := Configuration[struct {
 		Tools []Tool
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 	searched := false
 	var files []string
 	var length int
 	var commands []Tool
-	for _, tool := range cfg.Tools {
+	for _, tool := range cfg.Settings.Tools {
 		if l := len(tool.Name); l > length {
 			length = l
 		}

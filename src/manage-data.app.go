@@ -23,19 +23,19 @@ func ManageDataApp(a Args) error {
 	if len(args) > 1 {
 		sub = args[2:]
 	}
-	cfg := struct {
-		LockFile   string
-		Library    string
-		URL        string
-		Caffeinate bool
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	cfg := Configuration[struct {
+		LockFile string
+		Library  string
+		URL      string
+		Inhibit  string
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 	home := os.Getenv("HOME")
 	const isNoLock = "DATA_NOLOCK"
 	if os.Getenv(isNoLock) == "" {
-		lockFile := filepath.Join(home, cfg.LockFile)
+		lockFile := filepath.Join(home, cfg.Settings.LockFile)
 		if PathExists(lockFile) {
 			return nil
 		}
@@ -45,7 +45,7 @@ func ManageDataApp(a Args) error {
 		defer os.Remove(lockFile)
 	}
 	os.Setenv(isNoLock, "true")
-	lib := filepath.Join(home, cfg.Library)
+	lib := filepath.Join(home, cfg.Settings.Library)
 	files, err := os.ReadDir(lib)
 	if err != nil {
 		return err
@@ -91,17 +91,17 @@ complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
 	if !slices.Contains(opt, cmd) {
 		return fmt.Errorf("%s is an invalid library command", cmd)
 	}
-	if cfg.URL != "" {
-		res, err := http.DefaultClient.Get(cfg.URL)
+	if cfg.Settings.URL != "" {
+		res, err := http.DefaultClient.Get(cfg.Settings.URL)
 		if err != nil {
 			return err
 		}
 		defer res.Body.Close()
 	}
-	exe := "caffeinate"
+	exe := cfg.Settings.Inhibit
 	var arguments []string
 	script := filepath.Join(lib, cmd)
-	if cfg.Caffeinate {
+	if exe != "" {
 		arguments = append(arguments, script)
 	} else {
 		exe = script

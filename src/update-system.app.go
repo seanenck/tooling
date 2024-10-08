@@ -7,16 +7,17 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"strings"
 	"time"
 )
 
 // UpdateSystemApp handles system update calls
 func UpdateSystemApp(a Args) error {
-	cfg := struct {
+	cfg := Configuration[struct {
 		Path   string
 		Format string
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 	args := os.Args
@@ -34,24 +35,35 @@ func UpdateSystemApp(a Args) error {
 	default:
 		return fmt.Errorf("unknown arguments given: %v", args)
 	}
-	state := filepath.Join(os.Getenv("HOME"), cfg.Path)
+	state := filepath.Join(os.Getenv("HOME"), cfg.Settings.Path)
 	if !force {
 		if PathExists(state) {
 			i, err := os.Stat(state)
 			if err != nil {
 				return err
 			}
-			now := time.Now().Format(cfg.Format)
-			if i.ModTime().Format(cfg.Format) == now {
+			now := time.Now().Format(cfg.Settings.Format)
+			if i.ModTime().Format(cfg.Settings.Format) == now {
 				fmt.Println("up-to-date")
 				return nil
 			}
 		}
 	}
 	var updates []string
-	for k, v := range a.Flags {
-		if slices.Contains(v, a.Name) {
-			updates = append(updates, k)
+	files, err := os.ReadDir(a.Config.Dir)
+	if err != nil {
+		return err
+	}
+	for _, f := range files {
+		name := f.Name()
+		if strings.HasSuffix(name, a.Config.Extension) {
+			c := Configuration[struct{}]{}
+			if err := c.LoadFile(filepath.Join(a.Config.Dir, name)); err != nil {
+				return err
+			}
+			if slices.Contains(c.Flags, a.Name) {
+				updates = append(updates, strings.TrimSuffix(name, a.Config.Extension))
+			}
 		}
 	}
 	for _, cmd := range updates {

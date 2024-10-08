@@ -46,17 +46,17 @@ func GitUncommittedApp(a Args) error {
 		}
 		return nil
 	}
-	cfg := struct {
+	cfg := Configuration[struct {
 		Directories []string
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
 
 	var wg sync.WaitGroup
 	var all []chan string
 	home := fmt.Sprintf("%s%c", os.Getenv("HOME"), os.PathSeparator)
-	for _, dir := range cfg.Directories {
+	for _, dir := range cfg.Settings.Directories {
 		wg.Add(1)
 		go func(d string) {
 			defer wg.Done()

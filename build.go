@@ -70,7 +70,6 @@ type (
 	}
 	buildRequest struct {
 		target   string
-		flags    string
 		buildDir string
 		goos     string
 		sources  []string
@@ -121,9 +120,7 @@ func build() error {
 		return err
 	}
 	var configs []string
-	var targetFlags []string
 	installs := []string{fmt.Sprintf("%s := %s", destDir, filepath.Join("$(HOME)", ".local", "bin")), "all:"}
-	targetFlags = append(targetFlags, "make(map[string][]string)")
 	configFiles := filepath.Join(os.Getenv("HOME"), configOffset)
 	dir, err := os.ReadDir(configFiles)
 	if err != nil {
@@ -152,7 +149,6 @@ func build() error {
 		if !ok {
 			return fmt.Errorf("invalid settings json, flags array is invalid: %s", name)
 		}
-		var setFlags []string
 		isEnabled := false
 		for _, f := range flags {
 			s, ok := f.(string)
@@ -166,12 +162,10 @@ func build() error {
 				installs = append(installs, fmt.Sprintf("\tinstall -m755 %s %s", target, filepath.Join(fmt.Sprintf("$(%s)", destDir), target)))
 				continue
 			}
-			setFlags = append(setFlags, fmt.Sprintf("\"%s\"", s))
 		}
 		if !isEnabled {
 			continue
 		}
-		targetFlags = append(targetFlags, fmt.Sprintf("\targs.Flags[\"%s\"] = []string{%s}", target, strings.Join(setFlags, ", ")))
 	}
 	if len(configs) == 0 {
 		return errors.New("no configs found for build targets")
@@ -203,11 +197,10 @@ func build() error {
 	if err != nil {
 		return err
 	}
-	flags := strings.Join(targetFlags, "\n")
 	var res []chan buildResult
 	for _, target := range targets {
 		r := make(chan buildResult)
-		ask := buildRequest{target, flags, buildDir, goos, source, tmpl}
+		ask := buildRequest{target, buildDir, goos, source, tmpl}
 		go parallelBuild(ask, r)
 		res = append(res, r)
 	}
@@ -295,14 +288,15 @@ func buildTarget(ask buildRequest) (bool, error) {
 		Value string
 		Raw   bool
 	}
+	configPath := fmt.Sprintf("filepath.Join(os.Getenv(\"HOME\"), \"%s\")", configOffset)
 	app := struct {
 		App       string
 		Variables map[string]variable
 		GOOS      string
 	}{properName, map[string]variable{
-		"Name":       {Value: ask.target},
-		"ConfigFile": {Value: fmt.Sprintf("filepath.Join(os.Getenv(\"HOME\"), \"%s\")", filepath.Join(configOffset, fmt.Sprintf("%s%s", ask.target, configExt))), Raw: true},
-		"Flags":      {Value: ask.flags, Raw: true},
+		"Name":             {Value: ask.target},
+		"Config.Extension": {Value: configExt},
+		"Config.Dir":       {Value: configPath, Raw: true},
 	}, ask.goos}
 	var buf bytes.Buffer
 	if err := ask.tmpl.Execute(&buf, app); err != nil {

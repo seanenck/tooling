@@ -31,14 +31,14 @@ func VirtApp(a Args) error {
 	default:
 		return errors.New("invalid argument passed")
 	}
-	cfg := struct {
+	cfg := Configuration[struct {
 		Directory  string
 		Executable string
-	}{}
-	if err := a.ReadConfig(&cfg); err != nil {
+	}]{}
+	if err := cfg.Load(a); err != nil {
 		return err
 	}
-	dir := filepath.Join(os.Getenv("HOME"), cfg.Directory)
+	dir := filepath.Join(os.Getenv("HOME"), cfg.Settings.Directory)
 	files, err := os.ReadDir(dir)
 	if err != nil {
 		return err
@@ -115,7 +115,7 @@ complete -F _{{ $.Exe }} -o bashdefault {{ $.Exe }}`
 		if !slices.Contains(machines, sub) {
 			return fmt.Errorf("unknown machine: %s", sub)
 		}
-		return exec.Command("screen", "-d", "-m", "-S", fmt.Sprintf(screenName, sub), cfg.Executable, "--config", filepath.Join(dir, fmt.Sprintf("%s%s", sub, jsonFile))).Run()
+		return exec.Command("screen", "-d", "-m", "-S", fmt.Sprintf(screenName, sub), cfg.Settings.Executable, "--config", filepath.Join(dir, fmt.Sprintf("%s%s", sub, jsonFile))).Run()
 	case statusCommand:
 		printTable("vm", "status")
 		fmt.Println("------------------")
